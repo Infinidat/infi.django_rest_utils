@@ -1,0 +1,35 @@
+<h3>
+    Ordering
+    <button class="btn btn-default btn-sm" type="button" data-toggle="collapse" data-target="#ordering-collapse"><i class="glyphicon glyphicon-chevron-down"></i></button>
+</h3>
+
+<div class="collapse" id="ordering-collapse">
+
+    <p>
+    To sort the results use:
+    </p>
+
+    <p>
+        <code>
+        &lt;url&gt;?{{ ordering_param }}=&lt;field name&gt;[,&lt;field name&gt;]*
+        </code>
+    </p>
+
+    <p>
+        The default sorting order is ascending. To specify descending order, add a minus sign (-) before the field name.
+    </p>
+
+    <p>Ordering is supported on these fields:</p>
+    <ul>
+        {% for field in fields %}
+            <li>{{ field }}</li>
+        {% endfor %}
+    </ul>
+
+    {% if default_ordering %}
+        <p>
+            When ordering is not specified, the default ordering is <code>{{ default_ordering }}</code>
+        </p>
+    {% endif %}
+
+</div>

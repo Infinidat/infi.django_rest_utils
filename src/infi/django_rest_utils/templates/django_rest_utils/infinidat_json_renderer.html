@@ -1,0 +1,52 @@
+<h3>
+    {{ renderer.format|upper }} Output
+    <button class="btn btn-default btn-sm" type="button" data-toggle="collapse" data-target="#{{ renderer.format }}-output-collapse"><i class="glyphicon glyphicon-chevron-down"></i></button>
+</h3>
+
+<div class="collapse" id="{{ renderer.format }}-output-collapse">
+
+    <p>
+        To select this output format, pass <code>format={{ renderer.format }}</code> in the query string
+        or an <code>Accept: {{ renderer.media_type }}</code> HTTP header.
+    </p>
+
+    <p>
+        The response always contains a JSON object with 3 fields:
+    </p>
+    <ul>
+        <li><b>result</b> - the response data itself, or null in case of error.</li>
+        <li><b>metadata</b> - additional information about the response, for example pagination parameters.</li>
+        <li><b>error</b> - null in case of success, otherwise information about the error.</li>
+    </ul>
+
+    <p>
+        Example of a successful response:
+    </p>
+    <pre class="prettyprint">
+{
+    "error": null,
+    "result": {
+        ... data ...
+    },
+    "metadata": {
+        "ready": true
+    }
+}
+    </pre>
+
+    <p>
+        Example of a error response:
+    </p>
+    <pre class="prettyprint">
+{
+    "error": {
+        "message": "Not found."
+    },
+    "result": null,
+    "metadata": {
+        "ready": true
+    }
+}
+    </pre>
+
+</div>
