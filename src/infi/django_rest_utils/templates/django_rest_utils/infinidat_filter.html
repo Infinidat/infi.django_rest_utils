@@ -32,60 +32,16 @@
         <tbody>
             <tr>
                 <th>Operator</th>
-                <th>Acceptable value</th>
-                <th>Comments</th>
+                <th>Expects</th>
+                <th>Description</th>
             </tr>
-            <tr>
-                <td>eq</td>
-                <td>number/string/datetime</td>
-                <td>This is the default operator if one is not specified.</td>
-            </tr>
-            <tr>
-                <td>ne</td>
-                <td>number/string/datetime</td>
-                <td>&nbsp;</td>
-            </tr>
-            <tr>
-                <td>lt</td>
-                <td>number/string/datetime</td>
-                <td>&nbsp;</td>
-            </tr>
-            <tr>
-                <td>le</td>
-                <td>number/string/datetime</td>
-                <td>&nbsp;</td>
-            </tr>
-            <tr>
-                <td>gt</td>
-                <td>number/string/datetime</td>
-                <td>&nbsp;</td>
-            </tr>
-            <tr>
-                <td>ge</td>
-                <td>number/string/datetime</td>
-                <td>&nbsp;</td>
-            </tr>
-            <tr>
-                <td>in</td>
-                <td>list</td>
-                <td>Input list is val1, val2,.. which can be enclosed with () or [] or not enclosed at all.</td>
-            </tr>
-            <tr>
-                <td>out</td>
-                <td>list</td>
-                <td>Input list is val1, val2,.. which can be enclosed with () or [] or not enclosed at all.</td>
-            </tr>
-            <tr>
-                <td>between</td>
-                <td>list</td>
-                <td>A list of exactly two items, e.g. [5,10]; the filter is inclusive, equivalent to x &gt;= 5 AND y &lt;= 10.<br>
-                    The between filter is symmetric, e.g. between[5,10] and between[10,5] mean the same thing.</td>
-            </tr>
-            <tr>
-                <td>like</td>
-                <td>string</td>
-                <td>Searches for a substring anywhere inside the text.</td>
-            </tr>
+            {% for operator in operators %}
+                <tr>
+                    <td>{{ operator }}</td>
+                    <td>{{ operator.get_expected_value_description }}</td>
+                    <td>{{ operator.description }}</td>
+                </tr>
+            {% endfor %}
         </tbody>
     </table>
 
@@ -94,8 +50,10 @@
         <li>When filtering on more than one field, the conditions are ANDed together.</li>
         <li>String comparisons are case sensitive except for the <tt>like</tt> operator.</li>
         <li>Datetime values should be specified in ISO-8601 format: <tt>yyyy-mm-dd[Thh:mm[:ss][Z]]</tt>.
-            <br>For example 2014-01-17 or 2014-12-31T23:59:59Z</li>
+            <br>For example <tt>2014-01-17</tt> or <tt>2014-12-31T23:59:59Z</tt></li>
         <li>To filter on boolean fields use 1 for true and 0 for false.</li>
+        <li>Lists of values should be comma-separated, and optionally enclosed in parentheses or square brackets.
+            <br>For example <tt>red,blue,green</tt> or <tt>[red,blue,green]</tt></li>
     </ul>
 
 </div>

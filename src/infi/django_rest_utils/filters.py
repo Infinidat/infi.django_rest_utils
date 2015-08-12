@@ -5,6 +5,7 @@ from django.db.models import Q
 
 from rest_framework import filters
 from rest_framework.exceptions import ValidationError
+from rest_framework.compat import OrderedDict
 
 
 IGNORE = [
@@ -53,11 +54,33 @@ class FilterableField(object):
         return Q(**{self.source + '__' + orm_operator: value})
 
 
+class Operator(object):
+
+    def __init__(self, name, orm_operator, description='', negate=False, min_vals=1, max_vals=1):
+        self.name = name
+        self.orm_operator = orm_operator
+        self.description = description
+        self.negate = negate
+        self.min_vals = min_vals
+        self.max_vals = max_vals
+
+    def __unicode__(self):
+        return self.name
+
+    def get_expected_value_description(self):
+        if self.max_vals == 1:
+            return 'a single value'
+        if self.max_vals == self.min_vals:
+            return 'a list of exactly {} values'.format(self.max_vals)
+        return 'a list of {}-{} values'.format(self.min_vals, self.max_vals)
+
+
 class InfinidatFilter(filters.BaseFilterBackend):
     '''
     Implements a filter backend that uses Infinidat's API syntax.
-    The serializer in use must implement get_filterable_fields that
-    returns a list of FilterableField instances.
+    The serializer in use can implement get_filterable_fields that
+    returns a list of FilterableField instances. If not, the list
+    will be generated automatically from the serializer fields.
     '''
 
     def get_filter_description(self, view, html):
@@ -66,7 +89,9 @@ class InfinidatFilter(filters.BaseFilterBackend):
         filterable_fields = self._get_filterable_fields(view)
         if not filterable_fields:
             return None
-        return render_to_string('django_rest_utils/infinidat_filter.html', dict(fields=filterable_fields))
+        operators = self._get_operators()
+        return render_to_string('django_rest_utils/infinidat_filter.html',
+                                dict(fields=filterable_fields, operators=operators))
 
     def filter_queryset(self, request, queryset, view):
         filterable_fields = self._get_filterable_fields(view)
@@ -81,9 +106,8 @@ class InfinidatFilter(filters.BaseFilterBackend):
             if not field:
                 names = [f.name for f in filterable_fields]
                 raise ValidationError("Unknown filter field: '%s' (choices are %s)" % (field_name, ', '.join(names)))
-            if len(request.GET.getlist(field_name)) > 1:
-                raise ValidationError("Filter field '%s' specified more than once" % field_name)
-            queryset = self._apply_filter(queryset, field, request.GET[field_name])
+            for expr in request.GET.getlist(field_name):
+                queryset = self._apply_filter(queryset, field, expr)
         return queryset
 
     def _get_filterable_fields(self, view):
@@ -109,51 +133,51 @@ class InfinidatFilter(filters.BaseFilterBackend):
             return FilterableField.DATETIME
         return FilterableField.STRING
 
+    def _get_operators(self):
+        return [
+            Operator('eq',      'exact',     'field = value'),
+            Operator('ne',      'exact',     'field <> value', negate=True),
+            Operator('lt',      'lt',        'field < value'),
+            Operator('le',      'lte',       'field <= value'),
+            Operator('gt',      'gt',        'field > value'),
+            Operator('ge',      'gte',       'field >= value'),
+            Operator('like',    'icontains', 'field contains a string (case insensitive)'),
+            Operator('unlike',  'icontains', 'field does not contain a string (case insensitive)', negate=True),
+            Operator('in',      'in',        'field is equal to one of the given values', max_vals=1000),
+            Operator('out',     'in',        'field is not equal to any of the given values', negate=True, max_vals=1000),
+            Operator('between', 'range',     'field is in a range of two values (inclusive)', min_vals=2, max_vals=2)
+        ]
+
     def _apply_filter(self, queryset, field, expr):
-        # Get operator and value
-        if ':' in expr:
-            op, value = expr.split(':', 1)
-        else:
-            op, value = 'eq', expr
-        # Get filter kwargs
-        kwargs = {}
-        revert = False # if True, apply the inverse logic
-        if op == 'eq':
-            q = field.build_q('exact', value)
-        elif op == 'lt':
-            q = field.build_q('lt', value)
-        elif op == 'le':
-            q = field.build_q('lte', value)
-        elif op == 'gt':
-            q = field.build_q('gt', value)
-        elif op == 'ge':
-            q = field.build_q('gte', value)
-        elif op == 'ne':
-            q = ~field.build_q('exact', value)
-        elif op == 'like':
-            q = field.build_q('icontains', value)
-        elif op == 'in':
-            vals = _parse_array(value)
-            if not vals:
-                raise ValidationError(field.name + ': IN filter expects at least one value')
-            q = field.build_q('in', vals)
-        elif op == 'out':
-            vals = _parse_array(value)
-            if not vals:
-                raise ValidationError(field.name + ': OUT filter expects at least one value')
-            q = ~field.build_q('in', vals)
-        elif op == 'between':
-            vals = [field.convert(val) for val in _parse_array(value)]
-            if len(vals) != 2:
-                raise ValidationError(field.name + ': BETWEEN filter expects exactly 2 values')
-            q = field.build_q('range', vals)
-        else:
-            raise ValidationError(field.source + ': unknown operator "{}"'.format(op))
-        # Apply the filter to the queryset
+        q = self._build_q(field, expr)
         try:
             return queryset.filter(q)
         except (ValueError, DjangoValidationError):
             raise ValidationError(field.name + ': the given operator or value are inappropriate for this field')
+
+    def _build_q(self, field, expr):
+        # Get operator and value
+        operators = self._get_operators()
+        if ':' in expr:
+            opname, value = expr.split(':', 1)
+            try:
+                [operator] = [operator for operator in operators if operator.name == opname]
+            except ValueError:
+                raise ValidationError('{}: unknown operator "{}"'.format(field.name, opname))
+        else:
+            operator = operators[0] # First operator is the default one
+            value = expr
+        # Build Q object
+        if operator.max_vals > 1:
+            vals = _parse_array(value)
+            # Validate that the correct number of values is provided
+            if len(vals) < operator.min_vals or len(vals) > operator.max_vals:
+                raise ValidationError('{}: "{}" operator expects {}'.format(
+                                      field.name, operator.name, operator.get_expected_value_description()))
+            q = field.build_q(operator.orm_operator, vals)
+        else:
+            q = field.build_q(operator.orm_operator, value)
+        return ~q if operator.negate else q
 
 
 def _parse_array(expr):
