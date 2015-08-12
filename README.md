@@ -60,7 +60,7 @@ For example:
     http://example.com/api/employees/?name=like:Alex&title=in:[Developer,Tester]
     http://example.com/api/employees/?hired=between:[2015-01-01,2015-01-31]
 
-The fields available for filtering are deduced automatically from the serializer in use, which is assumed to be a subclass of `rest_framework.serializers.ModelSerializer`.
+To determine which fields are available for filtering, the class checks whether the serializer implements a `get_filterable_fields` method. This method should return a list of `FilterableField` instances. In case the serializer does not provide such a method, the filterable fields are deduced automatically from the serializer fields.
 
 To use this filter, add `infi.django_rest_utils.filters.InfinidatFilter` to the `DEFAULT_FILTER_BACKENDS` list in the settings.
 
