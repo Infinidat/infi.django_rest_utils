@@ -16,11 +16,13 @@
     </p>
 
     <p>The following fields can be used for filtering:</p>
-    <ul>
-        {% for field in fields %}
-            <li>{{ field }}</li>
-        {% endfor %}
-    </ul>
+    <table class="table table-bordered">
+        <tbody>
+            {% for field in fields %}
+                <tr><th>{{ field.name }}</th><td>{{ field.datatype}}</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
 
     <p>
     These are the operators that can be used in filters:
@@ -35,32 +37,32 @@
             </tr>
             <tr>
                 <td>eq</td>
-                <td>number/string/timestamp</td>
+                <td>number/string/datetime</td>
                 <td>This is the default operator if one is not specified.</td>
             </tr>
             <tr>
                 <td>ne</td>
-                <td>number/string/timestamp</td>
+                <td>number/string/datetime</td>
                 <td>&nbsp;</td>
             </tr>
             <tr>
                 <td>lt</td>
-                <td>number/string/timestamp</td>
+                <td>number/string/datetime</td>
                 <td>&nbsp;</td>
             </tr>
             <tr>
                 <td>le</td>
-                <td>number/string/timestamp</td>
+                <td>number/string/datetime</td>
                 <td>&nbsp;</td>
             </tr>
             <tr>
                 <td>gt</td>
-                <td>number/string/timestamp</td>
+                <td>number/string/datetime</td>
                 <td>&nbsp;</td>
             </tr>
             <tr>
                 <td>ge</td>
-                <td>number/string/timestamp</td>
+                <td>number/string/datetime</td>
                 <td>&nbsp;</td>
             </tr>
             <tr>
@@ -91,9 +93,9 @@
     <ul>
         <li>When filtering on more than one field, the conditions are ANDed together.</li>
         <li>String comparisons are case sensitive except for the <tt>like</tt> operator.</li>
-        <li>Timestamps are always in UTC, and should be specified in ISO-8601 format: <tt>yyyy-mm-dd[Thh:mm[:ss][Z]]</tt>.
+        <li>Datetime values should be specified in ISO-8601 format: <tt>yyyy-mm-dd[Thh:mm[:ss][Z]]</tt>.
             <br>For example 2014-01-17 or 2014-12-31T23:59:59Z</li>
-        <li>To filter on boolean fields use 1 or 0 for true or false respectively.</li>
+        <li>To filter on boolean fields use 1 for true and 0 for false.</li>
     </ul>
 
 </div>
