@@ -47,12 +47,14 @@ The response always contains a JSON object with 3 fields:
 * **metadata** - additional information about the response, for example pagination parameters.
 * **error** - null in case of success, otherwise information about the error.
 
-To use this renderer, add `infi.django_rest_utils.renderers.InfinidatJSONRenderer` to the `DEFAULT_RENDERER_CLASSES` list in the settings and remove `rest_framework.renderers.JSONRenderer`.
+To use this renderer, add `infi.django_rest_utils.renderers.InfinidatJSONRenderer` to the `DEFAULT_RENDERER_CLASSES`
+list in the settings and remove `rest_framework.renderers.JSONRenderer`.
 
 Filters
 =======
 ### InfinidatFilter
-Implements queryset filtering, with support for several comparison operators: `eq`, `ne`, `lt`, `le`, `gt`, `ge`, `in`, `out`, `like`, and  `between`.
+Implements queryset filtering, with support for several comparison operators: `eq`, `ne`, `lt`, `le`, `gt`, `ge`, `in`,
+`out`, `like`, and  `between`.
 For example:
 
     http://example.com/api/employees/?username=jj
@@ -60,14 +62,32 @@ For example:
     http://example.com/api/employees/?name=like:Alex&title=in:[Developer,Tester]
     http://example.com/api/employees/?hired=between:[2015-01-01,2015-01-31]
 
-The fields available for filtering are deduced automatically from the serializer in use, which is assumed to be a subclass of `rest_framework.serializers.ModelSerializer`.
+To determine which fields are available for filtering, the class checks whether the serializer implements a
+`get_filterable_fields` method. This method should return a list of `FilterableField` instances.
+In case the serializer does not provide such a method, the filterable fields are deduced automatically from the serializer fields.
 
 To use this filter, add `infi.django_rest_utils.filters.InfinidatFilter` to the `DEFAULT_FILTER_BACKENDS` list in the settings.
 
 ### OrderingFilter
-A subclass of the default `OrderingFilter` which only adds a section to the auto-generated view documentation (see Views for more information).
+A subclass of the default `OrderingFilter` which supports advanced ordering. This is done by checking if the serializer
+has a `get_ordering_fields` method, which is expected to return a list of `OrderingField` instances. An `OrderingField`
+can be used to encapsulate ordering by more than one model field, for example:
 
-To use this filter, add `infi.django_rest_utils.filters.OrderingFilter` to the `DEFAULT_FILTER_BACKENDS` list in the settings and remove `rest_framework.filters.OrderingFilter`.
+```python
+    OrderingField('name', source=('last_name', 'first_name'))
+```
+
+It can also define ordering by related fields (requires Django 1.8 or later):
+
+```python
+    OrderingField('department', source='department__name')
+```
+
+Unlike the default `OrderingFilter`, this implementation does not ignore invalid field names. Trying to sort the results
+using an unidentified field name results in an error response.
+
+To use this filter, add `infi.django_rest_utils.filters.OrderingFilter` to the `DEFAULT_FILTER_BACKENDS` list in the
+settings and remove `rest_framework.filters.OrderingFilter`.
 
 Pagination
 ==========
