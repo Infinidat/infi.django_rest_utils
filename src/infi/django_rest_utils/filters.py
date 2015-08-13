@@ -189,6 +189,28 @@ def _parse_array(expr):
     return [x.strip() for x in expr.split(',')]
 
 
+class OrderingField(object):
+    '''
+    Describes a field that can be used in ordering the queryset.
+    name - the field name to use in the API.
+    sources - the field name(s) or expression(s) in the model, in case it is different than the name.
+              this can be a string or a tuple of strings.
+    '''
+
+    def __init__(self, name, source=None):
+        self.name = name
+        self.source = (name,) if source is None else (source, ) if isinstance(source, basestring) else tuple(source)
+
+    def get_terms(self, descending_order=False):
+        '''
+        Get a list of terms to order the queryset by
+        '''
+        if descending_order:
+            return ['-' + s for s in self.source]
+        else:
+            return list(self.source)
+
+
 class OrderingFilter(filters.OrderingFilter):
     '''
     A subclass of the default OrderingFilter that provides an implementation of get_filter_description.
@@ -200,18 +222,42 @@ class OrderingFilter(filters.OrderingFilter):
         context = dict(
             ordering_param=self.ordering_param,
             default_ordering=self.get_default_ordering(view),
-            fields=self.get_valid_fields(view)
+            fields=self.get_ordering_fields(view)
         )
         return render_to_string('django_rest_utils/ordering_filter.html', context)
 
-    def get_valid_fields(self, view):
-        valid_fields = getattr(view, 'ordering_fields', self.ordering_fields)
-        if valid_fields is None:
-            # Default to allowing filtering on serializer fields
-            serializer_class = getattr(view, 'serializer_class')
-            valid_fields = [
-                field.source or field_name
-                for field_name, field in serializer_class().fields.items()
-                if not getattr(field, 'write_only', False) and not field.source == '*'
-            ]
-        return valid_fields
+    def get_ordering_fields(self, view):
+        '''
+        Returns a list of OrderingField instances.
+        '''
+        # Try to get fields from the view or this filter
+        sortable_fields = getattr(view, 'ordering_fields', self.ordering_fields)
+        if sortable_fields is None:
+            # Try to get fields from the serializer
+            serializer = view.get_serializer()
+            sortable_fields = getattr(serializer, 'get_ordering_fields', lambda: None)()
+            if sortable_fields is None:
+                # Autodetect fields
+                sortable_fields = [
+                    OrderingField(field.source or field_name)
+                    for field_name, field in serializer.fields.items()
+                    if not getattr(field, 'write_only', False) and not field.source == '*'
+                ]
+        else:
+            sortable_fields = [OrderingField(name) for name in sortable_fields]
+        return sortable_fields
+
+    def remove_invalid_fields(self, queryset, fields, view):
+        # Overridden to shout about invalid fields, instead of ignoring them
+        ret = []
+        ordering_fields_dict = {f.name: f for f in self.get_ordering_fields(view)}
+        for field in fields:
+            descending_order = (field[0] == '-')
+            name = field[1:] if descending_order else field
+            ordering_field = ordering_fields_dict.get(name)
+            if ordering_field is None:
+                 raise ValidationError('"{}"" is not a valid ordering field (choices are {})'.format(
+                    name, ', '.join(ordering_fields_dict.keys())))
+            ret += ordering_field.get_terms(descending_order)
+        print ret
+        return ret
