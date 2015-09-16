@@ -5,7 +5,7 @@ This project adds utility classes which enhance the django-rest-framework projec
 
 Usage
 =====
-Add infi.django_rest_utils to the `INSTALLED_APPS` in your settings file:
+a. Add infi.django_rest_utils to the `INSTALLED_APPS` in your settings file:
 
 ```python
     INSTALLED_APPS = (
@@ -15,7 +15,9 @@ Add infi.django_rest_utils to the `INSTALLED_APPS` in your settings file:
     )
 ```
 
-Use the utility classes in the `REST_FRAMEWORK` settings dictionary:
+b. Run database migrations.
+
+c. Use the utility classes in the `REST_FRAMEWORK` settings dictionary:
 
 ```python
 REST_FRAMEWORK = {
@@ -27,6 +29,13 @@ REST_FRAMEWORK = {
         'infi.django_rest_utils.filters.InfinidatFilter',
         'infi.django_rest_utils.filters.OrderingFilter',
     ),
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'infi.django_rest_utils.authentication.APITokenAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
     'ORDERING_PARAM': 'sort',
     'DEFAULT_PAGINATION_CLASS': 'infi.django_rest_utils.pagination.InfinidatPaginationSerializer',
     'PAGE_SIZE': 50,
@@ -35,7 +44,7 @@ REST_FRAMEWORK = {
 }
 ```
 
-See below for the various classes and features provided by this library.
+See below for the various classes and features provided by this library. Note that you don't have to use all of them - pick the ones that are relevant to your project.
 
 Renderers
 =========
@@ -124,6 +133,30 @@ from infi.django_rest_utils.views import ViewDescriptionMixin
 class EmployeeViewSet(ViewDescriptionMixin, viewsets.ReadOnlyModelViewSet):
     serializer_class = ...
     queryset = ...
+```
+
+Authentication
+==============
+### APITokenAuthentication
+
+A simple authentication scheme where each user gets a random 12-character API token, and needs to present this token in API requests via the `X-API-Token` header.
+
+To get the API token assigned to the logged-in user, you can expose `user_token_view` in your `urls.py` file:
+```python
+from infi.django_rest_utils.views import user_token_view
+
+urlpatterns = [
+    url(r'^user_token/$', user_token_view, name='user_token'),
+]
+```
+
+**Note**: if you are using CORS headers to allow cross-domain access to your API, be sure to include `X-API-Token` in
+the `Access-Control-Allow-Headers` header, otherwise it will not be passed to your server. For example for
+the *django-cors-headers* library, add this to your settings:
+```python
+CORS_ALLOW_HEADERS = (
+    'X-API-Token',
+)
 ```
 
 Developing and Packaging
