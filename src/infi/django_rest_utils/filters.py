@@ -53,6 +53,32 @@ class FilterableField(object):
             return self.source(self, orm_operator, value)
         return Q(**{self.source + '__' + orm_operator: value})
 
+    @classmethod
+    def for_model(cls, model_cls):
+        '''
+        Generate a list of filterable fields automatically for the given model class.
+        Includes model fields of the following types: CharField, TextField, IntegerField, AutoField,
+        DateField, DateTimeField, FloatField, DecimalField, BooleanField, NullBooleanField.
+        '''
+        from django.db.models.fields import CharField, TextField, IntegerField, AutoField, DateField, DateTimeField
+        from django.db.models.fields import FloatField, DecimalField, BooleanField, NullBooleanField
+        filterable_fields = []
+        for field in model_cls._meta.get_fields():
+            datatype = None
+            if isinstance(field, CharField) or isinstance(field, TextField):
+                datatype = FilterableField.STRING
+            elif isinstance(field, IntegerField) or isinstance(field, AutoField):
+                datatype = FilterableField.INTEGER
+            elif isinstance(field, FloatField) or isinstance(field, DecimalField):
+                datatype = FilterableField.FLOAT
+            elif isinstance(field, BooleanField) or isinstance(field, NullBooleanField):
+                datatype = FilterableField.BOOLEAN
+            elif isinstance(field, DateField) or isinstance(field, DateTimeField):
+                datatype = FilterableField.DATETIME
+            if datatype:
+                filterable_fields.append(cls(field.name, datatype=datatype))
+        return filterable_fields
+
 
 class Operator(object):
 
@@ -210,6 +236,21 @@ class OrderingField(object):
         else:
             return list(self.source)
 
+    @classmethod
+    def for_model(cls, model_cls):
+        '''
+        Generate a list of ordering fields automatically for the given model class.
+        Includes all "simple" model fields, meaning fields that are not relations to other models.
+        '''
+        from django.db.models.fields.related import RelatedField, ForeignObjectRel
+        ordering_fields = []
+        for field in model_cls._meta.get_fields():
+            if isinstance(field, RelatedField) or isinstance(field, ForeignObjectRel):
+                continue
+            ordering_fields.append(cls(field.name))
+        return ordering_fields
+
+
 
 class OrderingFilter(filters.OrderingFilter):
     '''
@@ -219,10 +260,13 @@ class OrderingFilter(filters.OrderingFilter):
     def get_filter_description(self, view, html):
         if not html:
             return None
+        ordering_fields = self.get_ordering_fields(view)
+        if not ordering_fields:
+            return None
         context = dict(
             ordering_param=self.ordering_param,
             default_ordering=self.get_default_ordering(view),
-            fields=self.get_ordering_fields(view)
+            fields=ordering_fields
         )
         return render_to_string('django_rest_utils/ordering_filter.html', context)
 
@@ -259,5 +303,4 @@ class OrderingFilter(filters.OrderingFilter):
                  raise ValidationError('"{}"" is not a valid ordering field (choices are {})'.format(
                     name, ', '.join(ordering_fields_dict.keys())))
             ret += ordering_field.get_terms(descending_order)
-        print ret
         return ret

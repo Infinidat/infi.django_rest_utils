@@ -1,4 +1,6 @@
 from django.utils.safestring import mark_safe
+from django.contrib.auth.decorators import login_required
+from django.http import HttpResponse
 
 
 class ViewDescriptionMixin(object):
@@ -25,3 +27,13 @@ class ViewDescriptionMixin(object):
             parts.append(desc)
 
         return mark_safe('\n'.join([part for part in parts if part]))
+
+
+@login_required
+def user_token_view(request):
+    """
+    Returns an API token for the logged-in user.
+    """
+    from models import APIToken
+    token = APIToken.objects.for_user(request.user)
+    return HttpResponse(str(token), content_type='text/plain')
