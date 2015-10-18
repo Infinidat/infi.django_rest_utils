@@ -1,4 +1,5 @@
 from django.db import models
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.utils.crypto import get_random_string
 
@@ -14,7 +15,7 @@ class APITokenManager(models.Manager):
 
 class APIToken(models.Model):
 
-    user = models.ForeignKey(User)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL)
     token = models.CharField(max_length=64)
 
     objects = APITokenManager()
