@@ -112,6 +112,22 @@ Extends the `PageNumberPagination` class to include more information in the resp
 
 To use, set `DEFAULT_PAGINATION_CLASS` to `infi.django_rest_utils.pagination.InfinidatPaginationSerializer` in your settings file.
 
+
+### InfinidatLargeSetPaginationSerializer
+Extends the `InfinidatPaginationSerializer` class to return estimated object count for large datasets where counting has a performance penalty.
+
+* **number_of_objects** - total number of items in the list
+* **limited_number_of_objects** - true if the object count is limited (meaning there are more pages)
+* **approximated_number_of_objects** - true if the object count is approximated
+* **pages_total** - total number of pages
+* **page_size** - number of items in each page
+* **page** - current page number
+* **next** - URL of the next page, or null if this is the last page
+* **previous** - URL of the previous page, or null if this is the first page
+
+To use, set `DEFAULT_PAGINATION_CLASS` to `infi.django_rest_utils.pagination.InfinidatLargeSetPaginationSerializer` in your settings file.
+
+
 Views
 =====
 ### ViewDescriptionMixin

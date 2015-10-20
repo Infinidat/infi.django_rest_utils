@@ -1,0 +1,43 @@
+<h3>
+    Pagination
+    <button class="btn btn-default btn-sm" type="button" data-toggle="collapse" data-target="#pagination-collapse"><i class="glyphicon glyphicon-chevron-down"></i></button>
+</h3>
+
+<div class="collapse" id="pagination-collapse">
+
+    <p>
+        The result list is split into pages of {{ pagination.page_size }} items.
+        Only the first page is returned by default; to get a different page use the <tt>{{ pagination.page_query_param }}</tt>
+        query parameter:
+    </p>
+    <p>
+        <code>
+            &lt;url&gt;?{{ pagination.page_query_param }}=17
+        </code>
+    </p>
+    <p>
+        {% if pagination.page_size_query_param %}
+            It is possible to change the number of items per page by adding the <tt>{{ pagination.page_size_query_param }}</tt>
+            query parameter to the URL.
+            {% if pagination.max_page_size %}
+                The maximum allowed page size is {{ pagination.max_page_size }}.
+            {% endif %}
+        {% endif %}
+    </p>
+
+    <p>
+        The following metadata field are provided regarding the pagination:
+    </p>
+
+    <table class="table table-bordered">
+        <tr><th>number_of_objects</th><td>total number of items in the list</td></tr>
+        <tr><th>approximated_number_of_objects</th><td>whether the total number is an exact number or just an approximation</td></tr>
+        <tr><th>limited_number_of_objects</th><td>whether they may be more number items than the reported number of objects</td></tr>
+        <tr><th>pages_total</th><td>total number of pages</td></tr>
+        <tr><th>page_size</th><td>number of items in each page</td></tr>
+        <tr><th>page</th><td>current page number</td></tr>
+        <tr><th>next</th><td>URL of the next page, or null if this is the last page</td></tr>
+        <tr><th>previous</th><td>URL of the previous page, or null if this is the first page</td></tr>
+    </table>
+
+</div>
