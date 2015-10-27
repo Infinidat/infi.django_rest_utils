@@ -28,6 +28,7 @@ REST_FRAMEWORK = {
     'DEFAULT_FILTER_BACKENDS': (
         'infi.django_rest_utils.filters.InfinidatFilter',
         'infi.django_rest_utils.filters.OrderingFilter',
+        'infi.django_rest_utils.filters.PluckingFilter',
     ),
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'infi.django_rest_utils.authentication.APITokenAuthentication',
