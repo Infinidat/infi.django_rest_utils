@@ -12,7 +12,7 @@ class LargeQuerySetPage(Page):
         if self.paginator.limited_number_of_objects:
             return self.paginator.next_page_exists(self.number)
         else:
-            super(LargeQuerySetPage, self).has_next()
+            return super(LargeQuerySetPage, self).has_next()
 
 class LargeQuerySetPaginator(Paginator):
     def __init__(self, *args, **kwargs):
