@@ -3,6 +3,8 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from django.template.loader import render_to_string
 from django.db.models import Q
 
+import re
+
 from rest_framework import filters
 from rest_framework.exceptions import ValidationError
 from rest_framework.compat import OrderedDict
@@ -13,7 +15,8 @@ IGNORE = [
     'fields',
     'page',
     'page_size',
-    'format'
+    'format',
+    'q'
 ]
 
 
@@ -102,6 +105,63 @@ class Operator(object):
         return 'a list of {}-{} values'.format(self.min_vals, self.max_vals)
 
 
+def _get_filterable_fields(view):
+    '''
+    Get the list of filterable fields for the given view, or deduce them
+    from the serializer fields.
+    '''
+    serializer = view.get_serializer()
+    if hasattr(serializer, 'get_filterable_fields'):
+        return serializer.get_filterable_fields()
+    # Autodetect filterable fields
+    return [
+        FilterableField(field.source or field_name, datatype=_get_field_type(field))
+        for field_name, field in serializer.fields.items()
+        if not getattr(field, 'write_only', False) and not field.source == '*'
+    ]
+
+
+def _get_field_type(serializer_field):
+    '''
+    Determine the appropriate FilterableField type for the given serializer field.
+    '''
+    from rest_framework.fields import BooleanField, IntegerField, FloatField, DecimalField, DateTimeField
+    if isinstance(serializer_field, BooleanField):
+        return FilterableField.BOOLEAN
+    if isinstance(serializer_field, IntegerField):
+        return FilterableField.INTEGER
+    if isinstance(serializer_field, FloatField) or isinstance(serializer_field, DecimalField):
+        return FilterableField.FLOAT
+    if isinstance(serializer_field, DateTimeField):
+        return FilterableField.DATETIME
+    return FilterableField.STRING
+
+
+def _parse_array(expr):
+    '''
+    Parse an array expression such as "a,b" or "[1,2,3]"
+    '''
+    expr = expr.strip()
+    if (expr.startswith('(') and expr.endswith(')')) or expr.startswith('[') and expr.endswith(']'):
+        expr = expr[1:-1]
+    if not expr:
+        return []
+    return [x.strip() for x in expr.split(',')]
+
+
+def _normalize_query(query_string,
+                    findterms=re.compile(r'"([^"]+)"|(\S+)').findall,
+                    normspace=re.compile(r'\s{2,}').sub):
+    '''
+    Splits the query string in invidual keywords, getting rid of unecessary spaces
+    and grouping quoted words together.
+    Example:
+    >>> normalize_query('  some random  words "with   quotes  " and   spaces')
+    ['some', 'random', 'words', 'with quotes', 'and', 'spaces']
+    '''
+    return [normspace(' ', (t[0] or t[1]).strip()) for t in findterms(query_string)]
+
+
 class InfinidatFilter(filters.BaseFilterBackend):
     '''
     Implements a filter backend that uses Infinidat's API syntax.
@@ -113,7 +173,7 @@ class InfinidatFilter(filters.BaseFilterBackend):
     def get_filter_description(self, view, html):
         if not html:
             return None
-        filterable_fields = self._get_filterable_fields(view)
+        filterable_fields = _get_filterable_fields(view)
         if not filterable_fields:
             return None
         operators = self._get_operators()
@@ -121,7 +181,7 @@ class InfinidatFilter(filters.BaseFilterBackend):
                                 dict(fields=filterable_fields, operators=operators))
 
     def filter_queryset(self, request, queryset, view):
-        filterable_fields = self._get_filterable_fields(view)
+        filterable_fields = _get_filterable_fields(view)
         for field_name in request.GET.keys():
             if field_name in IGNORE:
                 continue
@@ -136,29 +196,6 @@ class InfinidatFilter(filters.BaseFilterBackend):
             for expr in request.GET.getlist(field_name):
                 queryset = self._apply_filter(queryset, field, expr)
         return queryset
-
-    def _get_filterable_fields(self, view):
-        serializer = view.get_serializer()
-        if hasattr(serializer, 'get_filterable_fields'):
-            return serializer.get_filterable_fields()
-        # Autodetect filterable fields
-        return [
-            FilterableField(field.source or field_name, datatype=self._get_field_type(field))
-            for field_name, field in serializer.fields.items()
-            if not getattr(field, 'write_only', False) and not field.source == '*'
-        ]
-
-    def _get_field_type(self, serializer_field):
-        from rest_framework.fields import BooleanField, IntegerField, FloatField, DecimalField, DateTimeField
-        if isinstance(serializer_field, BooleanField):
-            return FilterableField.BOOLEAN
-        if isinstance(serializer_field, IntegerField):
-            return FilterableField.INTEGER
-        if isinstance(serializer_field, FloatField) or isinstance(serializer_field, DecimalField):
-            return FilterableField.FLOAT
-        if isinstance(serializer_field, DateTimeField):
-            return FilterableField.DATETIME
-        return FilterableField.STRING
 
     def _get_operators(self):
         return [
@@ -207,13 +244,29 @@ class InfinidatFilter(filters.BaseFilterBackend):
         return ~q if operator.negate else q
 
 
-def _parse_array(expr):
-    expr = expr.strip()
-    if (expr.startswith('(') and expr.endswith(')')) or expr.startswith('[') and expr.endswith(']'):
-        expr = expr[1:-1]
-    if not expr:
-        return []
-    return [x.strip() for x in expr.split(',')]
+class SimpleFilter(object):
+
+    def get_filter_description(self, view, html):
+        if not html:
+            return None
+        filterable_fields = _get_filterable_fields(view)
+        if not filterable_fields:
+            return None
+        return render_to_string('django_rest_utils/simple_filter.html', dict(fields=filterable_fields))
+
+    def filter_queryset(self, request, queryset, view):
+        terms = _normalize_query(request.GET.get('q', ''))
+        if terms:
+            filterable_fields = _get_filterable_fields(view)
+            query = None
+            for term in terms:
+                or_query = None # Query to search for a given term in each field
+                for field in _get_filterable_fields(view):
+                    q = field.build_q('icontains', term)
+                    or_query = or_query | q if or_query else q
+                query = query & or_query if query else or_query
+            queryset = queryset.filter(query)
+        return queryset
 
 
 class OrderingField(object):
