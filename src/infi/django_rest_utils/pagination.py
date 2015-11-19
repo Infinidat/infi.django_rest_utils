@@ -134,7 +134,7 @@ class InfinidatLargeSetPaginationSerializer(InfinidatPaginationSerializer):
             self.page = paginator.page(page_number)
         except InvalidPage as exc:
             msg = self.invalid_page_message.format(
-                page_number=page_number, message=six.text_type(exc)
+                page_number=page_number, message=exc.message
             )
             raise NotFound(msg)
 
