@@ -358,15 +358,3 @@ class OrderingFilter(filters.OrderingFilter):
                     name, ', '.join(ordering_fields_dict.keys())))
             ret += ordering_field.get_terms(descending_order)
         return ret
-
-
-class PluckingFilter(filters.BaseFilterBackend):
-    '''
-    A subclass of the default OrderingFilter that provides an implementation of get_filter_description.
-    '''
-
-    def get_filter_description(self, view, html):
-        return render_to_string('django_rest_utils/plucking_filter.html', context=dict())
-
-    def filter_queryset(self, request, queryset, view):
-        return queryset

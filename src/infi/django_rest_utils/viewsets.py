@@ -23,21 +23,9 @@ class FilteredSerializerMixin(object):
         return
 
 
-class PluckableListViewMixin(object):
-    def list(self, request, *args, **kwargs):
-        self.get_serializer = partial(self.get_filtered_serializer, request)
-        return super(PluckableListViewMixin, self).list(request, *args, **kwargs)
-
-
-class PluckableRetrieveModelMixin(object):
-    def retrieve(self, request, *args, **kwargs):
-        self.get_serializer = partial(self.get_filtered_serializer, request)
-        return super(PluckableRetrieveModelMixin, self).retrieve(request, *args, **kwargs)
-
-
-class ReadOnlyModelViewSet(PluckableRetrieveModelMixin, PluckableListViewMixin, FilteredSerializerMixin, viewsets.ReadOnlyModelViewSet):
+class ReadOnlyModelViewSet(FilteredSerializerMixin, viewsets.ReadOnlyModelViewSet):
     pass
 
 
-class ModelViewSet(PluckableRetrieveModelMixin, PluckableListViewMixin, FilteredSerializerMixin, viewsets.ModelViewSet):
+class ModelViewSet(FilteredSerializerMixin, viewsets.ModelViewSet):
     pass
