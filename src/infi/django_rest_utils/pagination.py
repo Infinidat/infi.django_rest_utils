@@ -3,6 +3,7 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger, Page, 
 from rest_framework import pagination
 from rest_framework.compat import OrderedDict
 from rest_framework.response import Response
+from rest_framework.exceptions import NotFound
 from django.conf import settings
 from django.db import connections
 
