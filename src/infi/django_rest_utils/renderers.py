@@ -1,34 +1,8 @@
 from django.template.loader import render_to_string
 
 from rest_framework.renderers import JSONRenderer
+from infi.django_rest_utils.pluck import pluck_result, collect_items_from_string_lists
 from itertools import chain
-
-
-def _extract_items_from_string_lists(lists, delimiter=','):
-    '''
-    A fancy way to flatten a list of comma seperated lists into one list of strings
-    '''
-    return set(reduce(chain, (s.split(',') for s in lists)))
-
-
-def _pluck_result(result, request):
-    if isinstance(result, list):
-        return [_pluck_result(x, request) for x in result]
-
-    if not isinstance(result, dict):
-        return result
-
-    field_lists = request.query_params.getlist('fields')
-    if len(field_lists) == 0:
-        return result
-
-    fields_to_keep = _extract_items_from_string_lists(field_lists)
-    illegal_fields = fields_to_keep - set(result.keys())
-
-    if len(illegal_fields) > 0:
-        raise Exception('No such fields: %s' % ', '.join(list(illegal_fields)))
-
-    return {k: v for (k, v) in result.iteritems() if k in fields_to_keep}
 
 
 def _pluck_response(response, renderer_context):
@@ -36,7 +10,9 @@ def _pluck_response(response, renderer_context):
     :response: the objects to be JSON-encoded
     '''
     try:
-        return dict(metadata=response['metadata'], result=_pluck_result(response['result'], renderer_context['request']))
+        request = renderer_context['request']
+        return dict(metadata=response['metadata'], result=pluck_result(response['result'],
+                                                                       request.query_params.getlist('fields')))
     except Exception as e:
         renderer_context['response'].status_code = 400
         return dict(metadata=dict(ready=True), result=None, error=dict(message=e.message))
