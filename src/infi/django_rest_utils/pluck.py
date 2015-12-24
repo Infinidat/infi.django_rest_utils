@@ -10,8 +10,9 @@ def collect_items_from_string_lists(lists, delimiter=','):
 def traverse(path, d, collected_path=[]):
     if isinstance(path, basestring):
         return traverse(path.split('/'), d, collected_path)
+    deadend = [('/'.join(collected_path + path), None)]
     if d is None:
-        return []
+        return deadend
     if not path or not path[0]:
         return [('/'.join(collected_path), d)]
     if len(path) == 0:
@@ -28,11 +29,14 @@ def traverse(path, d, collected_path=[]):
     if isinstance(d, dict):
         return chain(*[traverse(path[1:], d.get(path[0]), collected_path + [path[0]])])
     try:
-        if isinstance(d, list) and int(path[0]) < len(d):
-            return chain(*[traverse(path[1:], d[int(path[0])], collected_path + [path[0]])])
+        if isinstance(d, list):
+            if int(path[0]) < len(d):
+                return chain(*[traverse(path[1:], d[int(path[0])], collected_path + [path[0]])])
+            else:
+                return deadend
     except ValueError:
         # Trying to access array with non numeric key
-        return []
+        return deadend
     return []
 
 
