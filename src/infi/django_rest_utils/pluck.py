@@ -7,37 +7,52 @@ def collect_items_from_string_lists(lists, delimiter=','):
     return set(chain(*(s.split(',') for s in lists)))
 
 
-def traverse(path, d, collected_path=[]):
+DELIMITER = '.'
+
+def fragments(path):
+    return [x for x in path.split(DELIMITER) if x != '']
+
+def traverse(path, d, prefix=''):
+    '''
+    Returns a list of <path, value> pairs of paths matching 'path' within data object d.
+    The first member of the tuple is the path within the data object under which the matching value was found (prefixed
+    by the value given in 'prefix' member).
+    '''
+    # Convert input members to lists of path fragments.
     if isinstance(path, basestring):
-        return traverse(path.split('/'), d, collected_path)
-    deadend = [('/'.join(collected_path + path), None)]
-    if d is None:
-        return deadend
-    if not path or not path[0]:
-        return [('/'.join(collected_path), d)]
-    if len(path) == 0:
-        return hb
-    if path[0] == '*':
-        if isinstance(d, dict):
-            return chain(*[traverse(path[1:], v, collected_path + [k]) for (k, v) in d.iteritems()])
-        if isinstance(d, list):
-            return chain(*
-                [traverse(path[1:], v, collected_path + [str(idx)]) for (idx, v) in enumerate(d)])
-        else:
-            return []
-        raise Exception("Illegal path: value of type {} cannot be traversed via wildcard".format(type(d)))
-    if isinstance(d, dict):
-        return chain(*[traverse(path[1:], d.get(path[0]), collected_path + [path[0]])])
-    try:
-        if isinstance(d, list):
-            if int(path[0]) < len(d):
-                return chain(*[traverse(path[1:], d[int(path[0])], collected_path + [path[0]])])
+        return traverse(fragments(path), d, prefix)
+    if isinstance(prefix, basestring):
+        return traverse(path, d, fragments(prefix))
+    absolute_path = (DELIMITER.join(prefix + path))
+    '''
+    Use while as an inner scope and break when reaching branch that yields no result
+    '''
+    while True:
+        if d is None:
+            break
+        if not path or not path[0]:
+            return [(absolute_path, d)]
+        if len(path) == 0:
+            return hb
+        if path[0] == '*':
+            if isinstance(d, list):
+                return chain(*[traverse(path[1:], v, prefix + [str(idx)]) for (idx, v) in enumerate(d)])
             else:
-                return deadend
-    except ValueError:
-        # Trying to access array with non numeric key
-        return deadend
-    return []
+                break
+        if isinstance(d, dict):
+            return chain(*[traverse(path[1:], d.get(path[0]), prefix + [path[0]])])
+        try:
+            if isinstance(d, list):
+                if int(path[0]) < len(d):
+                    return chain(*[traverse(path[1:], d[int(path[0])], prefix + [path[0]])])
+                else:
+                    break
+        except ValueError:
+            # Trying to access array with non numeric key
+            break
+        raise 'Illegal data type {}'.format(type(d))
+
+    return [(DELIMITER.join(prefix + path), None)]
 
 
 
