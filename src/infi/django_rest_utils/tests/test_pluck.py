@@ -14,6 +14,7 @@ class PluckTest(unittest.TestCase):
         self.assertEquals(list(traverse('*', [3, 4])), [('0', 3), ('1', 4)])
         self.assertEquals(list(traverse('b.*', {'b': [3, 4]})), [('b.0', 3), ('b.1', 4)])
         self.assertEquals(list(traverse('y.*', {'b': [3, 4]})), [('y.*', None)])
+        self.assertEquals(list(traverse('b.*.a', {'b': {'1': {'a': 5}, '2': {'a': 6}}})), [('b.1.a', 5), ('b.2.a', 6)])
         self.assertEquals(list(traverse('y.a', {'y': [3, 4]})), [('y.a', None)])
         self.assertEquals(list(traverse('a.0.', {'a': [1]})), [('a.0', 1)])
 

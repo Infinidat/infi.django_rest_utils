@@ -35,6 +35,8 @@ def traverse(path, d, prefix=''):
         if len(path) == 0:
             return hb
         if path[0] == '*':
+            if isinstance(d, dict):
+                return chain(*[traverse(path[1:], v, prefix + [str(idx)]) for (idx, v) in d.iteritems()])
             if isinstance(d, list):
                 return chain(*[traverse(path[1:], v, prefix + [str(idx)]) for (idx, v) in enumerate(d)])
             else:
