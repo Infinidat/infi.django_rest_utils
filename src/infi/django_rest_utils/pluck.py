@@ -52,7 +52,8 @@ def traverse(path, d, prefix=''):
         except ValueError:
             # Trying to access array with non numeric key
             break
-        raise 'Illegal data type {}'.format(type(d))
+        break
+
 
     return [(DELIMITER.join(prefix + path), None)]
 

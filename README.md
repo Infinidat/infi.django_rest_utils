@@ -28,7 +28,6 @@ REST_FRAMEWORK = {
     'DEFAULT_FILTER_BACKENDS': (
         'infi.django_rest_utils.filters.InfinidatFilter',
         'infi.django_rest_utils.filters.OrderingFilter',
-        'infi.django_rest_utils.filters.PluckingFilter',
     ),
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'infi.django_rest_utils.authentication.APITokenAuthentication',
@@ -57,6 +56,11 @@ The response always contains a JSON object with 3 fields:
 * **metadata** - additional information about the response, for example pagination parameters.
 * **error** - null in case of success, otherwise information about the error.
 
+Also allows plucking (selecting) specific fields of every result (e.g timestamp or parsed_data.system_info.host_count)
+Field plucked can be tested against non-plucked json api responses from a file by using the 'rest_utils'
+``` python
+bin/rest_utils pluck api_response.json timestamp system_serial parsed_data.system_info
+```
 To use this renderer, add `infi.django_rest_utils.renderers.InfinidatJSONRenderer` to the `DEFAULT_RENDERER_CLASSES`
 list in the settings and remove `rest_framework.renderers.JSONRenderer`.
 
