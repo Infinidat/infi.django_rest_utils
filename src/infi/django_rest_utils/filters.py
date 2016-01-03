@@ -7,7 +7,7 @@ import re
 
 from rest_framework import filters
 from rest_framework.exceptions import ValidationError
-from rest_framework.compat import OrderedDict
+from collections import OrderedDict
 
 
 IGNORE = [

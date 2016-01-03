@@ -1,7 +1,7 @@
 from django.template.loader import render_to_string
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger, Page, InvalidPage
 from rest_framework import pagination
-from rest_framework.compat import OrderedDict
+from collections import OrderedDict
 from rest_framework.response import Response
 from rest_framework.exceptions import NotFound
 from django.conf import settings
