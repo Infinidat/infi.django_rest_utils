@@ -105,6 +105,10 @@ class InfinidatPaginationSerializer(pagination.PageNumberPagination):
             ('results', data)
         ]))
 
+    # Has to be set since django rest utils since commit 3806af3d15dcbf9c5e1e390d1ae3808f12191342 on django rest
+    # framework: https://github.com/tomchristie/django-rest-framework/commit/3806af3d15dcbf9c5e1e390d1ae3808f12191342
+    page_size_query_param = 'page_size'
+
     def get_paginator_description(self, html):
         if not html:
             return None
