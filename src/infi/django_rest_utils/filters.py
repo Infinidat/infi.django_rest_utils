@@ -177,8 +177,12 @@ class InfinidatFilter(filters.BaseFilterBackend):
         if not filterable_fields:
             return None
         operators = self._get_operators()
-        return render_to_string('django_rest_utils/infinidat_filter.html',
-                                dict(fields=filterable_fields, operators=operators))
+        context = dict(
+            fields=filterable_fields,
+            operators=operators,
+            url=view.request.build_absolute_uri(view.request.path)
+        )
+        return render_to_string('django_rest_utils/infinidat_filter.html', context)
 
     def filter_queryset(self, request, queryset, view):
         filterable_fields = _get_filterable_fields(view)
@@ -320,7 +324,9 @@ class OrderingFilter(filters.OrderingFilter):
         context = dict(
             ordering_param=self.ordering_param,
             default_ordering=self.get_default_ordering(view),
-            fields=ordering_fields
+            fields=ordering_fields,
+            ordering=self.get_ordering(view.request, view.queryset, view),
+            url=view.request.build_absolute_uri(view.request.path)
         )
         return render_to_string('django_rest_utils/ordering_filter.html', context)
 
