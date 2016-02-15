@@ -1,8 +1,9 @@
 from django.template.loader import render_to_string
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger, Page, InvalidPage
 from rest_framework import pagination
-from rest_framework.compat import OrderedDict
+from collections import OrderedDict
 from rest_framework.response import Response
+from rest_framework.exceptions import NotFound
 from django.conf import settings
 from django.db import connections
 
@@ -104,6 +105,10 @@ class InfinidatPaginationSerializer(pagination.PageNumberPagination):
             ('results', data)
         ]))
 
+    # Has to be set since django rest utils since commit 3806af3d15dcbf9c5e1e390d1ae3808f12191342 on django rest
+    # framework: https://github.com/tomchristie/django-rest-framework/commit/3806af3d15dcbf9c5e1e390d1ae3808f12191342
+    page_size_query_param = 'page_size'
+
     def get_paginator_description(self, html):
         if not html:
             return None
@@ -119,7 +124,6 @@ class InfinidatLargeSetPaginationSerializer(InfinidatPaginationSerializer):
         Paginate a queryset if required, either returning a
         page object, or `None` if pagination is not configured for this view.
         """
-        self._handle_backwards_compat(view)
 
         page_size = self.get_page_size(request)
         if not page_size:

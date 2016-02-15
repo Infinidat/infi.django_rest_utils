@@ -1,9 +1,16 @@
+<style>
+    {# Hide the "filters" button #}
+    #content > button.btn-default {
+        display: none;
+    }
+</style>
+
 <h3>
     Ordering
     <button class="btn btn-default btn-sm" type="button" data-toggle="collapse" data-target="#ordering-collapse"><i class="glyphicon glyphicon-chevron-down"></i></button>
 </h3>
 
-<div class="collapse" id="ordering-collapse">
+<div class="collapse {% if ordering %}in{% endif %}" id="ordering-collapse">
 
     <p>
     To sort the results use:
@@ -11,7 +18,7 @@
 
     <p>
         <code>
-        &lt;url&gt;?{{ ordering_param }}=&lt;field name&gt;[,&lt;field name&gt;]*
+        {{ url }}?{{ ordering_param }}=&lt;field name&gt;[,&lt;field name&gt;]*
         </code>
     </p>
 
@@ -19,12 +26,49 @@
         The default sorting order is ascending. To specify descending order, add a minus sign (-) before the field name.
     </p>
 
-    <p>Ordering is supported on these fields:</p>
-    <ul>
-        {% for field in fields %}
-            <li>{{ field.name }}</li>
-        {% endfor %}
-    </ul>
+    <div class="form-inline" style="margin-bottom: 10px;">
+        <div class="form-group">
+            <label style="width: 75px;">Sort by:</label>
+            <select name="sort-0-field" id="sort-0-field" class="form-control">
+                <option value=""></option>
+                {% for field in fields %}<option value="{{ field.name }}">{{ field.name }}</option>{% endfor %}
+            </select>
+            <select name="sort-0-dir" id="sort-0-dir" class="form-control">
+                <option value="">ascending</option>
+                <option value="-">descending</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="form-inline" style="margin-bottom: 10px;">
+        <div class="form-group">
+            <label style="width: 75px;">Then by:</label>
+            <select name="sort-1-field" id="sort-1-field" class="form-control">
+                <option value=""></option>
+                {% for field in fields %}<option value="{{ field.name }}">{{ field.name }}</option>{% endfor %}
+            </select>
+            <select name="sort-1-dir" id="sort-1-dir" class="form-control">
+                <option value="">ascending</option>
+                <option value="-">descending</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="form-inline" style="margin-bottom: 10px;">
+        <div class="form-group">
+            <label style="width: 75px;">Then by:</label>
+            <select name="sort-2-field" id="sort-2-field" class="form-control">
+                <option value=""></option>
+                {% for field in fields %}<option value="{{ field.name }}">{{ field.name }}</option>{% endfor %}
+            </select>
+            <select name="sort-2-dir" id="sort-2-dir" class="form-control">
+                <option value="">ascending</option>
+                <option value="-">descending</option>
+            </select>
+        </div>
+    </div>
+
+    <button class="btn btn-primary" style="margin-left: 80px;" onclick="sort();">Apply</button>
 
     {% if default_ordering %}
         <p>
@@ -33,3 +77,45 @@
     {% endif %}
 
 </div>
+
+<script>
+
+    function updateQueryStringParameter(key, value) {
+        var uri = window.location.toString();
+        var re = new RegExp("([?&])" + key + "=.*?(&|$)", "i");
+        var separator = uri.indexOf('?') !== -1 ? "&" : "?";
+        if (uri.match(re)) {
+            return uri.replace(re, '$1' + key + "=" + value + '$2');
+        }
+        else {
+            return uri + separator + key + "=" + value;
+        }
+    }
+
+    function sort() {
+        var fields = [];
+        for (var i = 0; i < 3; i++) {
+            var field = $('#sort-' + i + '-field').val();
+            var dir = $('#sort-' + i + '-dir').val();
+            if (field) fields.push(dir + field);
+        }
+        window.location = updateQueryStringParameter('{{ ordering_param }}', fields.join(','));
+    }
+
+    document.addEventListener("DOMContentLoaded", function(event) {
+        var ordering = {{ ordering|safe }};
+        if (ordering.length) {
+            for (var i = 0; i < ordering.length; i++) {
+                var field = ordering[i];
+                if (field.charAt(0) == '-') {
+                    $('#sort-' + i + '-field').val(field.substring(1))
+                    $('#sort-' + i + '-dir').val('-');
+                }
+                else {
+                    $('#sort-' + i + '-field').val(field)
+                    $('#sort-' + i + '-dir').val('');
+                }
+            }
+        }
+    });
+</script>
