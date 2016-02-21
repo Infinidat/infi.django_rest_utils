@@ -80,17 +80,7 @@
 
 <script>
 
-    function updateQueryStringParameter(key, value) {
-        var uri = window.location.toString();
-        var re = new RegExp("([?&])" + key + "=.*?(&|$)", "i");
-        var separator = uri.indexOf('?') !== -1 ? "&" : "?";
-        if (uri.match(re)) {
-            return uri.replace(re, '$1' + key + "=" + value + '$2');
-        }
-        else {
-            return uri + separator + key + "=" + value;
-        }
-    }
+    {% include "django_rest_utils/functions.js" %}
 
     function sort() {
         var fields = [];
@@ -103,7 +93,7 @@
     }
 
     document.addEventListener("DOMContentLoaded", function(event) {
-        var ordering = {{ ordering|safe }};
+        var ordering = {{ ordering|default:"[]"|safe }};
         if (ordering.length) {
             for (var i = 0; i < ordering.length; i++) {
                 var field = ordering[i];

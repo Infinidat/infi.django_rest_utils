@@ -26,6 +26,7 @@ REST_FRAMEWORK = {
         'rest_framework.renderers.BrowsableAPIRenderer',
     ),
     'DEFAULT_FILTER_BACKENDS': (
+        'infi.django_rest_utils.filters.SimpleFilter',
         'infi.django_rest_utils.filters.InfinidatFilter',
         'infi.django_rest_utils.filters.OrderingFilter',
     ),
@@ -56,7 +57,7 @@ The response always contains a JSON object with 3 fields:
 * **metadata** - additional information about the response, for example pagination parameters.
 * **error** - null in case of success, otherwise information about the error.
 
-Also allows plucking (selecting) specific fields of every result (e.g timestamp or parsed_data.system_info.host_count)
+Also allows plucking (selecting) specific fields of every result (e.g timestamp or parsed_data.system_info.host_count).
 Field plucked can be tested against non-plucked json api responses from a file by using the 'rest_utils'
 ``` python
 bin/rest_utils pluck api_response.json timestamp system_serial parsed_data.system_info
@@ -81,6 +82,12 @@ To determine which fields are available for filtering, the class checks whether 
 In case the serializer does not provide such a method, the filterable fields are deduced automatically from the serializer fields.
 
 To use this filter, add `infi.django_rest_utils.filters.InfinidatFilter` to the `DEFAULT_FILTER_BACKENDS` list in the settings.
+
+### SimpleFilter
+
+This type of filter uses the same `FilterableField` definitions that `InfinidatFilter` uses, but searches all string and integer fields for a match (exact match in case of integers, and substring match in case of strings). For example if the search term is *yellow sun*, the filter will return all objects that have both *yellow* and *sun* in any of their filterable fields. If the search term is quoted (*"yellow sun"*), it will be searched without splitting it into words.
+
+The search term should appear in the URL in a query parameter named `q`. It can be used in conjuction with `InfinidatFilter` or separately.
 
 ### OrderingFilter
 A subclass of the default `OrderingFilter` which supports advanced ordering. This is done by checking if the serializer

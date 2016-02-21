@@ -45,6 +45,9 @@ class FilterableField(object):
     def __unicode__(self):
         return self.name
 
+    def __repr__(self):
+        return '<FilterableField name=%s source=%s datatype=%s>' % (self.name, self.source, self.datatype)
+
     def convert(self, value):
         if isinstance(value, list):
             return [self.converter(v) for v in value]
@@ -177,9 +180,12 @@ class InfinidatFilter(filters.BaseFilterBackend):
         if not filterable_fields:
             return None
         operators = self._get_operators()
+        active_filters = [(f.name, view.request.GET[f.name]) for f in filterable_fields if f.name in view.request.GET]
+        print active_filters
         context = dict(
             fields=filterable_fields,
             operators=operators,
+            active_filters=active_filters,
             url=view.request.build_absolute_uri(view.request.path)
         )
         return render_to_string('django_rest_utils/infinidat_filter.html', context)
@@ -253,10 +259,15 @@ class SimpleFilter(object):
     def get_filter_description(self, view, html):
         if not html:
             return None
-        filterable_fields = _get_filterable_fields(view)
+        filterable_fields = [f for f in _get_filterable_fields(view) if f.datatype in (FilterableField.STRING, FilterableField.INTEGER)]
         if not filterable_fields:
             return None
-        return render_to_string('django_rest_utils/simple_filter.html', dict(fields=filterable_fields))
+        context = dict(
+            fields=filterable_fields,
+            url=view.request.build_absolute_uri(view.request.path),
+            terms=view.request.GET.get('q', '')
+        )
+        return render_to_string('django_rest_utils/simple_filter.html', context)
 
     def filter_queryset(self, request, queryset, view):
         terms = _normalize_query(request.GET.get('q', ''))
@@ -264,10 +275,19 @@ class SimpleFilter(object):
             filterable_fields = _get_filterable_fields(view)
             query = None
             for term in terms:
+                numeric = term.isdigit()
                 or_query = None # Query to search for a given term in each field
-                for field in _get_filterable_fields(view):
-                    q = field.build_q('icontains', term)
-                    or_query = or_query | q if or_query else q
+                for field in filterable_fields:
+                    try:
+                        if field.datatype == FilterableField.STRING:
+                            q = field.build_q('icontains', term)
+                        elif field.datatype == FilterableField.INTEGER and numeric:
+                            q = field.build_q('exact', term)
+                        else:
+                            continue
+                        or_query = or_query | q if or_query else q
+                    except ValidationError:
+                        pass
                 query = query & or_query if query else or_query
             queryset = queryset.filter(query)
         return queryset

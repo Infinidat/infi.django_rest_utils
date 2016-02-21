@@ -1,12 +1,12 @@
 <h3>
-    Filtering
+    Advanced Filtering
     <button class="btn btn-default btn-sm" type="button" data-toggle="collapse" data-target="#filtering-collapse"><i class="glyphicon glyphicon-chevron-down"></i></button>
 </h3>
 
-<div class="collapse" id="filtering-collapse">
+<div class="collapse {% if active_filters %}in{% endif %}" id="filtering-collapse">
 
     <p>
-    The syntax for filtering objects is:
+    The syntax for filtering objects by specific fields is:
     </p>
 
     <p>
@@ -16,11 +16,32 @@
     </p>
 
     <p>The following fields can be used for filtering:</p>
-    <table class="table table-bordered">
+    <table class="table" style="width: auto;" id="advanced_filters">
         <tbody>
             {% for field in fields %}
-                <tr><th>{{ field.name }}</th><td>{{ field.datatype}}</td></tr>
+                <tr>
+                    <th style="vertical-align: middle;">{{ field.name }}</th>
+                    <td>
+                        <div class="form-inline">
+                            <div class="form-group">
+                                <select class="form-control" id="filter_{{ field.name }}_op">
+                                    {% for operator in operators %}
+                                        <option value="{{ operator }}">{{ operator }}</option>
+                                    {% endfor %}
+                                </select>
+                                <input class="form-control" id="filter_{{ field.name }}_val" name="{{ field.name }}">
+                            </div>
+                        </div>
+                    </td>
+                    <td style="vertical-align: middle;">({{ field.datatype}})</td>
+                </tr>
             {% endfor %}
+            <tr>
+                <th>&nbsp;</th>
+                <td colspan="2">
+                    <button class="btn btn-primary" onclick="advanced_search(); return false;">Apply</button>
+                </td>
+            </tr>
         </tbody>
     </table>
 
@@ -57,3 +78,29 @@
     </ul>
 
 </div>
+
+<script>
+
+    {% include "django_rest_utils/functions.js" %}
+
+    function advanced_search() {
+        var uri = window.location.toString();
+        $('#advanced_filters input').each(function() {
+            var input = $(this);
+            if (input.val()) {
+                var value = input.prev().val() + ':' + input.val();
+                uri = updateQueryStringParameter(input.attr('name'), value, uri);
+            }
+            else {
+                uri = removeQueryStringParameter(input.attr('name'), uri);
+            }
+        });
+        window.location = uri;
+    }
+
+    {% for filter in active_filters %}
+        document.getElementById('filter_{{ filter.0 }}_op').value = {% if ":" in filter.1 %}'{{ filter.1 }}'.split(':')[0]{% else %}'eq'{% endif %};
+        document.getElementById('filter_{{ filter.0 }}_val').value = '{{ filter.1 }}'{% if ":" in filter.1 %}.split(':')[1]{% endif %};
+    {% endfor %}
+
+</script>

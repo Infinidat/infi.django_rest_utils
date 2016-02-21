@@ -1,1 +1,44 @@
-{# tbd #}
+<h3>
+    Simple Filtering
+    <button class="btn btn-default btn-sm" type="button" data-toggle="collapse" data-target="#simple-filtering-collapse"><i class="glyphicon glyphicon-chevron-down"></i></button>
+</h3>
+
+<div class="collapse {% if terms %}in{% endif %}" id="simple-filtering-collapse">
+
+    <p>
+        Objects can be filtered quickly using the <code>q</code> query parameter:
+    </p>
+
+    <p>
+        <code>
+        {{ url }}?q=&lt;search terms&gt;
+        </code>
+    </p>
+
+    <p>
+        The search terms are split into words, and each word is searched for in the following
+        fields:
+        {% for field in fields %}<b>{{ field.name }}</b>{% if not forloop.last %}, {% endif %}{% endfor %}.
+        Words can be grouped using quotes to prevent them from being split, for example <em>"black dog"</em>.
+        You can try simple filtering below:
+    </p>
+
+    <div class="form-inline">
+        <div class="form-group">
+            <label for="simplefilter_q">Search terms: </label>
+            <input id="simplefilter_q" type="text" class="form-control" value="{{ terms }}">
+            <button class="btn btn-primary" onclick="simple_search(); return false;">Apply</button>
+        </div>
+    </div>
+
+</div>
+
+<script>
+
+    {% include "django_rest_utils/functions.js" %}
+
+    function simple_search() {
+        window.location = updateQueryStringParameter('q', $('#simplefilter_q').val());
+    }
+
+</script>
