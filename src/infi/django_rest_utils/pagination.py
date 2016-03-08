@@ -109,11 +109,12 @@ class InfinidatPaginationSerializer(pagination.PageNumberPagination):
     # framework: https://github.com/tomchristie/django-rest-framework/commit/3806af3d15dcbf9c5e1e390d1ae3808f12191342
     page_size_query_param = 'page_size'
 
-    def get_paginator_description(self, html):
+    def get_paginator_description(self, view, html):
         if not html:
             return None
         context = dict(
-            pagination=self
+            pagination=self,
+            url=view.request.build_absolute_uri(view.request.path)
         )
         return render_to_string('django_rest_utils/infinidat_pagination.html', context)
 
@@ -163,10 +164,11 @@ class InfinidatLargeSetPaginationSerializer(InfinidatPaginationSerializer):
             ('results', data)
         ]))
 
-    def get_paginator_description(self, html):
+    def get_paginator_description(self, view, html):
         if not html:
             return None
         context = dict(
-            pagination=self
+            pagination=self,
+            url=view.request.build_absolute_uri(view.request.path)
         )
         return render_to_string('django_rest_utils/infinidat_large_queryset_pagination.html', context)

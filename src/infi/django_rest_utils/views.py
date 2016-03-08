@@ -15,7 +15,7 @@ class ViewDescriptionMixin(object):
         parts.append(func(self.__class__, html))
 
         for renderer in self.get_renderers():
-            desc = renderer.get_renderer_description(html) if hasattr(renderer, 'get_renderer_description') else None
+            desc = renderer.get_renderer_description(self, html) if hasattr(renderer, 'get_renderer_description') else None
             parts.append(desc)
 
         for cls in getattr(self, 'filter_backends', []):
@@ -23,7 +23,7 @@ class ViewDescriptionMixin(object):
             parts.append(desc)
 
         if self.paginator and hasattr(self.paginator, 'get_paginator_description'):
-            desc = self.paginator.get_paginator_description(html)
+            desc = self.paginator.get_paginator_description(self, html)
             parts.append(desc)
 
         return mark_safe('\n'.join([part for part in parts if part]))

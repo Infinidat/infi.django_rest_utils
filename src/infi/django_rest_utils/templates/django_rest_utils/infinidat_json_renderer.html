@@ -56,16 +56,60 @@
     <button class="btn btn-default btn-sm" type="button" data-toggle="collapse" data-target="#plucking-collapse"><i class="glyphicon glyphicon-chevron-down"></i></button>
 </h3>
 
-<div class="collapse" id="plucking-collapse">
+<div class="collapse {% if current_plucking %}in{% endif %}" id="plucking-collapse">
 
-    <p>
-    To retrieve specific fields use:
-    </p>
+    <p>To retrieve specific fields use:</p>
 
     <p>
         <code>
-        &lt;url&gt;?fields=&lt;field name&gt;[,&lt;field name&gt;]*
+        {{ url }}?fields=&lt;field name&gt;[,&lt;field name&gt;]*
         </code>
     </p>
 
+    <p>Note that field names may contain dots (".") to retrieve sub-fields.</p>
+
+    <p>The following are the top-level fields that can be plucked:</p>
+    <table class="table" style="width: auto;" id="plucking-table">
+        <tbody>
+            {% for field in fields %}
+                <tr>
+                    <th style="vertical-align: middle;">{{ field }}</th>
+                    <td>
+                        <input type="checkbox" id="pluck_{{ field }}" name="{{ field }}">
+                    </td>
+                </tr>
+            {% endfor %}
+            <tr>
+                <th>&nbsp;</th>
+                <td colspan="2">
+                    <button class="btn btn-primary" onclick="pluck(); return false;">Apply</button>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+
 </div>
+
+<script>
+
+    {% include "django_rest_utils/functions.js" %}
+
+    function pluck() {
+        var uri = window.location.toString();
+        var value = "";
+        $('#plucking-table input:checked').each(function() {
+            if (value.length > 0) {
+                value += ",";
+            }
+            value += $(this).attr("name");
+        });
+        uri = updateQueryStringParameter("fields", value, uri);
+        window.location = uri;
+    }
+
+    {% for field in current_plucking %}
+        document.getElementById("pluck_{{ field }}").checked = true;
+    {% endfor %}
+
+</script>
