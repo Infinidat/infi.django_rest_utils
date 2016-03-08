@@ -384,3 +384,12 @@ class OrderingFilter(filters.OrderingFilter):
                     name, ', '.join(ordering_fields_dict.keys())))
             ret += ordering_field.get_terms(descending_order)
         return ret
+
+    def filter_queryset(self, request, queryset, view):
+        # Overridden to always sort also by ctid, which is the physical location of the db table row.
+        # This ensures that the order is unique, allowing to get consistent pagination.
+        # See http://www.postgresql.org/docs/9.3/static/queries-limit.html
+        # Note that this code is PostgreSQL specific.
+        ordering = self.get_ordering(request, queryset, view) or []
+        ordering.append('%s.ctid' % queryset.model._meta.db_table)
+        return queryset.extra(order_by=ordering)
