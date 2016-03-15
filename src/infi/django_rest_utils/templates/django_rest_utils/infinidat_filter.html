@@ -99,8 +99,15 @@
     }
 
     {% for filter in active_filters %}
-        document.getElementById('filter_{{ filter.0 }}_op').value = {% if ":" in filter.1 %}'{{ filter.1 }}'.split(':')[0]{% else %}'eq'{% endif %};
-        document.getElementById('filter_{{ filter.0 }}_val').value = '{{ filter.1 }}'{% if ":" in filter.1 %}.split(':')[1]{% endif %};
+        var filter_value = "{{ filter.1 }}";
+        var colon_location = filter_value.indexOf(':');
+        var operator = 'eq';
+        if (colon_location != -1) {
+            operator = filter_value.slice(0, colon_location);
+            filter_value = filter_value.slice(colon_location + 1);
+        }
+        document.getElementById('filter_{{ filter.0 }}_op').value = operator;
+        document.getElementById('filter_{{ filter.0 }}_val').value = filter_value;
     {% endfor %}
 
 </script>
