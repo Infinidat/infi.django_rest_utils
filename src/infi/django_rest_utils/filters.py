@@ -28,6 +28,7 @@ class FilterableField(object):
              it can also be a callable f(field, orm_operator, value) --> Q object
     converter - an optional function to modify the given filter value before passing it to the queryset.
     datatype - the type of values that are expected for this field.
+    advanced - if true, the filter will be used only by InfinidatFilter and not by SimpleFilter
     '''
 
     STRING   = 'string'
@@ -36,11 +37,12 @@ class FilterableField(object):
     BOOLEAN  = 'boolean'
     DATETIME = 'datetime'
 
-    def __init__(self, name, source=None, converter=None, datatype=STRING):
+    def __init__(self, name, source=None, converter=None, datatype=STRING, advanced=False):
         self.name = name
         self.source = source or name
         self.converter = converter or (lambda value: value)
         self.datatype = datatype
+        self.advanced = advanced
 
     def __unicode__(self):
         return self.name
@@ -259,7 +261,9 @@ class SimpleFilter(object):
     def get_filter_description(self, view, html):
         if not html:
             return None
-        filterable_fields = [f for f in _get_filterable_fields(view) if f.datatype in (FilterableField.STRING, FilterableField.INTEGER)]
+        filterable_fields = [f for f in _get_filterable_fields(view)
+                             if f.datatype in (FilterableField.STRING, FilterableField.INTEGER)
+                             and not f.advanced]
         if not filterable_fields:
             return None
         context = dict(
@@ -278,6 +282,8 @@ class SimpleFilter(object):
                 numeric = term.isdigit()
                 or_query = None # Query to search for a given term in each field
                 for field in filterable_fields:
+                    if field.advanced:
+                        continue
                     try:
                         if field.datatype == FilterableField.STRING:
                             q = field.build_q('icontains', term)
