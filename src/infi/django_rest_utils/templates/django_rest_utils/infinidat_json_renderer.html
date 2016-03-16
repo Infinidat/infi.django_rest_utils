@@ -69,24 +69,26 @@
     <p>Note that field names may contain dots (".") to retrieve sub-fields.</p>
 
     <p>The following are the top-level fields that can be plucked:</p>
-    <table class="table" style="width: auto;" id="plucking-table">
-        <tbody>
-            {% for field in fields %}
+    <form onsubmit="pluck(); return false;">
+        <table class="table" style="width: auto;" id="plucking-table">
+            <tbody>
+                {% for field in fields %}
+                    <tr>
+                        <th style="vertical-align: middle;">{{ field }}</th>
+                        <td>
+                            <input type="checkbox" id="pluck_{{ field }}" name="{{ field }}">
+                        </td>
+                    </tr>
+                {% endfor %}
                 <tr>
-                    <th style="vertical-align: middle;">{{ field }}</th>
-                    <td>
-                        <input type="checkbox" id="pluck_{{ field }}" name="{{ field }}">
+                    <th>&nbsp;</th>
+                    <td colspan="2">
+                        <button type="submit" class="btn btn-primary">Apply</button>
                     </td>
                 </tr>
-            {% endfor %}
-            <tr>
-                <th>&nbsp;</th>
-                <td colspan="2">
-                    <button class="btn btn-primary" onclick="pluck(); return false;">Apply</button>
-                </td>
-            </tr>
-        </tbody>
-    </table>
+            </tbody>
+        </table>
+    </form>
 
 
 </div>

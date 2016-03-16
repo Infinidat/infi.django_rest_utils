@@ -16,34 +16,36 @@
     </p>
 
     <p>The following fields can be used for filtering:</p>
-    <table class="table" style="width: auto;" id="advanced_filters">
-        <tbody>
-            {% for field in fields %}
-                <tr>
-                    <th style="vertical-align: middle;">{{ field.name }}</th>
-                    <td>
-                        <div class="form-inline">
-                            <div class="form-group">
-                                <select class="form-control" id="filter_{{ field.name }}_op">
-                                    {% for operator in operators %}
-                                        <option value="{{ operator }}">{{ operator }}</option>
-                                    {% endfor %}
-                                </select>
-                                <input class="form-control" id="filter_{{ field.name }}_val" name="{{ field.name }}">
+    <form onsubmit="advanced_search(); return false;">
+        <table class="table" style="width: auto;" id="advanced_filters">
+            <tbody>
+                {% for field in fields %}
+                    <tr>
+                        <th style="vertical-align: middle;">{{ field.name }}</th>
+                        <td>
+                            <div class="form-inline">
+                                <div class="form-group">
+                                    <select class="form-control" id="filter_{{ field.name }}_op">
+                                        {% for operator in operators %}
+                                            <option value="{{ operator }}">{{ operator }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <input class="form-control" id="filter_{{ field.name }}_val" name="{{ field.name }}">
+                                </div>
                             </div>
-                        </div>
+                        </td>
+                        <td style="vertical-align: middle;">({{ field.datatype}})</td>
+                    </tr>
+                {% endfor %}
+                <tr>
+                    <th>&nbsp;</th>
+                    <td colspan="2">
+                        <button type="submit" class="btn btn-primary">Apply</button>
                     </td>
-                    <td style="vertical-align: middle;">({{ field.datatype}})</td>
                 </tr>
-            {% endfor %}
-            <tr>
-                <th>&nbsp;</th>
-                <td colspan="2">
-                    <button class="btn btn-primary" onclick="advanced_search(); return false;">Apply</button>
-                </td>
-            </tr>
-        </tbody>
-    </table>
+            </tbody>
+        </table>
+    </form>
 
     <p>
     These are the operators that can be used in filters:

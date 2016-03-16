@@ -23,13 +23,15 @@
         You can try simple filtering below:
     </p>
 
-    <div class="form-inline">
-        <div class="form-group">
-            <label for="simplefilter_q">Search terms: </label>
-            <input id="simplefilter_q" type="text" class="form-control" value="{{ terms }}">
-            <button class="btn btn-primary" onclick="simple_search(); return false;">Apply</button>
+    <form onsubmit="simple_search(); return false;">
+        <div class="form-inline">
+            <div class="form-group">
+                <label for="simplefilter_q">Search terms: </label>
+                <input id="simplefilter_q" type="text" class="form-control" value="{{ terms }}">
+                <button type="submit" class="btn btn-primary">Apply</button>
+            </div>
         </div>
-    </div>
+    </form>
 
 </div>
 
