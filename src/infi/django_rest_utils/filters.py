@@ -183,7 +183,6 @@ class InfinidatFilter(filters.BaseFilterBackend):
             return None
         operators = self._get_operators()
         active_filters = [(f.name, view.request.GET[f.name]) for f in filterable_fields if f.name in view.request.GET]
-        print active_filters
         context = dict(
             fields=filterable_fields,
             operators=operators,
