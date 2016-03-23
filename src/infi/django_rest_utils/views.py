@@ -14,13 +14,20 @@ class ViewDescriptionMixin(object):
         func = self.settings.VIEW_DESCRIPTION_FUNCTION
         parts.append(func(self.__class__, html))
 
+        for authenticator in self.get_authenticators():
+            if hasattr(authenticator, 'get_authenticator_description'):
+                desc = authenticator.get_authenticator_description(self, html)
+                parts.append(desc)
+
         for renderer in self.get_renderers():
-            desc = renderer.get_renderer_description(self, html) if hasattr(renderer, 'get_renderer_description') else None
-            parts.append(desc)
+            if hasattr(renderer, 'get_renderer_description'):
+                desc = renderer.get_renderer_description(self, html)
+                parts.append(desc)
 
         for cls in getattr(self, 'filter_backends', []):
-            desc = cls().get_filter_description(self, html) if hasattr(cls, 'get_filter_description') else None
-            parts.append(desc)
+            if hasattr(cls, 'get_filter_description'):
+                desc = cls().get_filter_description(self, html)
+                parts.append(desc)
 
         if self.paginator and hasattr(self.paginator, 'get_paginator_description'):
             desc = self.paginator.get_paginator_description(self, html)

@@ -1,3 +1,4 @@
+from django.template.loader import render_to_string
 from rest_framework import authentication
 from rest_framework import exceptions
 
@@ -18,3 +19,7 @@ class APITokenAuthentication(authentication.BaseAuthentication):
         except APIToken.DoesNotExist:
             raise exceptions.AuthenticationFailed("Invalid API token '%s'" % token)
         return (api_token.user, None)
+
+    def get_authenticator_description(self, view, html):
+        token = APIToken.objects.for_user(view.request.user)
+        return render_to_string('django_rest_utils/api_token_authentication.html', dict(token=str(token)))
