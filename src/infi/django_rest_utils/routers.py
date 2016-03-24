@@ -7,6 +7,7 @@ from rest_framework import views
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
 from django.utils.safestring import mark_safe
+from django.utils.html import strip_tags
 
 
 class DefaultRouter(routers.DefaultRouter):
@@ -29,6 +30,13 @@ class DefaultRouter(routers.DefaultRouter):
                     if hasattr(authenticator, 'get_authenticator_description'):
                         desc = authenticator.get_authenticator_description(self, html)
                         parts.append(desc)
+                objects_html = "<h3>Objects</h3>"
+                for prefix, viewset, basename in registry:
+                    func = viewset.settings.VIEW_DESCRIPTION_FUNCTION
+                    desc = strip_tags(func(viewset, html))
+                    objects_html += "<p><a href=\"{}\">{}:</a> {}</p>".format(prefix, viewset().get_view_name(), desc)
+                parts.append(objects_html)
+
                 return mark_safe('\n'.join([part for part in parts if part]))
 
             def get(self, request, *args, **kwargs):
