@@ -11,6 +11,12 @@ from django.utils.html import strip_tags
 
 
 class DefaultRouter(routers.DefaultRouter):
+
+    def __init__(self, name=None, description=None):
+        super(DefaultRouter, self).__init__()
+        self.name = name
+        self.description = description
+
     def get_api_root_view(self):
         """
         Return a view to use as the API root.
@@ -20,12 +26,19 @@ class DefaultRouter(routers.DefaultRouter):
         for prefix, viewset, basename in self.registry:
             api_root_dict[prefix] = list_name.format(basename=basename)
         registry = self.registry
+        name = self.name
+        description = self.description
 
         class APIRoot(views.APIView):
             _ignore_model_permissions = True
 
+            def get_view_name(self):
+                return name if name else super(APIRoot, self).get_view_name()
+
             def get_view_description(self, html=False):
-                parts = []
+                parts = ['<section class="docs">']
+                if description:
+                    parts.append('<p>%s</p>' % description)
                 for authenticator in self.get_authenticators():
                     if hasattr(authenticator, 'get_authenticator_description'):
                         desc = authenticator.get_authenticator_description(self, html)
@@ -33,9 +46,10 @@ class DefaultRouter(routers.DefaultRouter):
                 objects_html = "<h3>Objects</h3>"
                 for prefix, viewset, basename in registry:
                     func = viewset.settings.VIEW_DESCRIPTION_FUNCTION
-                    desc = strip_tags(func(viewset, html))
-                    objects_html += "<p><a href=\"{}\">{}:</a> {}</p>".format(prefix, viewset().get_view_name(), desc)
+                    desc = func(viewset, html)
+                    objects_html += "<h4><a href=\"{}\">{}</a></h4>{}".format(prefix, viewset().get_view_name(), desc)
                 parts.append(objects_html)
+                parts.append("</section>")
 
                 return mark_safe('\n'.join([part for part in parts if part]))
 

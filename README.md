@@ -146,11 +146,12 @@ Views
 This class can be used to enhance the browsable API with dynamic auto-generated documentation. The documentation is composed from:
 
 * The view's docstring
-* Information about supported output formats, taken from renderers that implement `get_renderer_description(self, html)`
+* Information about authentication, taken from authentication classes that implement `get_authenticator_description(self, view, html)`
+* Information about supported output formats, taken from renderers that implement `get_renderer_description(self, view, html)`
 * Information about filtering and ordering, taken from filters that implement `get_filter_description(self, view, html)`
-* Information about pagination, when the pagination class implements `get_paginator_description(self, html)`
+* Information about pagination, when the pagination class implements `get_paginator_description(self, view, html)`
 
-All renderers, filters and paginators provided by infi.django_rest_utils implement these methods.
+All relevant classes provided by infi.django_rest_utils implement these methods, meaning that detailed documentation is automatically generated when they are used with views that extend `ViewDescriptionMixin`.
 
 To use this mixin, add it as the **first** parent class of your views and viewsets. For example:
 
@@ -186,6 +187,20 @@ CORS_ALLOW_HEADERS = (
     'X-API-Token',
 )
 ```
+
+
+Routers
+=======
+### DefaultRouter
+
+This is a subclass of `rest_framework.routers.DefaultRouter` that provides a richer API root view. The view includes information about authentication as well as a table of contents. Additionally, a name and a description can be provided for the root view:
+```python
+from infi.django_rest_utils.routers import DefaultRouter
+
+router = DefaultRouter(name='Sample API', description='This is a sample API.')
+router.register(...)
+```
+
 
 Developing and Packaging
 ========================

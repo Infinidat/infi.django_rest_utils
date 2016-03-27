@@ -10,7 +10,7 @@ class ViewDescriptionMixin(object):
         Return some descriptive text for the view, as used in OPTIONS responses
         and in the browsable API.
         """
-        parts = []
+        parts = ['<section class="docs">']
         func = self.settings.VIEW_DESCRIPTION_FUNCTION
         parts.append(func(self.__class__, html))
 
@@ -33,6 +33,7 @@ class ViewDescriptionMixin(object):
             desc = self.paginator.get_paginator_description(self, html)
             parts.append(desc)
 
+        parts.append('</section>')
         return mark_safe('\n'.join([part for part in parts if part]))
 
 
