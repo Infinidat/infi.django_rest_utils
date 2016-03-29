@@ -294,7 +294,7 @@ class SimpleFilter(object):
                     except ValidationError:
                         pass
                 query = query & or_query if query else or_query
-            queryset = queryset.filter(query)
+            queryset = queryset.filter(query) if query else queryset.none()
         return queryset
 
 
