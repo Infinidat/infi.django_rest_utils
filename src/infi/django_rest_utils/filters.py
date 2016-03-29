@@ -91,18 +91,21 @@ class FilterableField(object):
 
 class Operator(object):
 
-    def __init__(self, name, orm_operator, description='', negate=False, min_vals=1, max_vals=1):
+    def __init__(self, name, orm_operator, description='', negate=False, min_vals=1, max_vals=1, boolean=False):
         self.name = name
         self.orm_operator = orm_operator
         self.description = description
         self.negate = negate
         self.min_vals = min_vals
         self.max_vals = max_vals
+        self.boolean = boolean
 
     def __unicode__(self):
         return self.name
 
     def get_expected_value_description(self):
+        if self.boolean:
+            return 'a single boolean value: 0 or 1'
         if self.max_vals == 1:
             return 'a single value'
         if self.max_vals == self.min_vals:
@@ -220,7 +223,8 @@ class InfinidatFilter(filters.BaseFilterBackend):
             Operator('unlike',  'icontains', 'field does not contain a string (case insensitive)', negate=True),
             Operator('in',      'in',        'field is equal to one of the given values', max_vals=1000),
             Operator('out',     'in',        'field is not equal to any of the given values', negate=True, max_vals=1000),
-            Operator('between', 'range',     'field is in a range of two values (inclusive)', min_vals=2, max_vals=2)
+            Operator('between', 'range',     'field is in a range of two values (inclusive)', min_vals=2, max_vals=2),
+            Operator('isnull',  'isnull',    'field is null', boolean=True),
         ]
 
     def _apply_filter(self, queryset, field, expr):
@@ -252,6 +256,13 @@ class InfinidatFilter(filters.BaseFilterBackend):
             q = field.build_q(operator.orm_operator, vals)
         else:
             q = field.build_q(operator.orm_operator, value)
+        if operator.boolean:
+            try:
+                value = int(value)
+            except ValueError:
+                raise ValidationError('{}: "{}" operator expects {}'.format(
+                                      field.name, operator.name, operator.get_expected_value_description()))
+
         return ~q if operator.negate else q
 
 
