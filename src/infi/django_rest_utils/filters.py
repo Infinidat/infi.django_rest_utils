@@ -255,13 +255,13 @@ class InfinidatFilter(filters.BaseFilterBackend):
                                       field.name, operator.name, operator.get_expected_value_description()))
             q = field.build_q(operator.orm_operator, vals)
         else:
+            if operator.boolean:
+                try:
+                    value = int(value)
+                except ValueError:
+                    raise ValidationError('{}: "{}" operator expects {}'.format(
+                                          field.name, operator.name, operator.get_expected_value_description()))
             q = field.build_q(operator.orm_operator, value)
-        if operator.boolean:
-            try:
-                value = int(value)
-            except ValueError:
-                raise ValidationError('{}: "{}" operator expects {}'.format(
-                                      field.name, operator.name, operator.get_expected_value_description()))
 
         return ~q if operator.negate else q
 
