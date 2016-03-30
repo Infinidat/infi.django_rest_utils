@@ -230,7 +230,7 @@ class InfinidatFilter(filters.BaseFilterBackend):
     def _apply_filter(self, queryset, field, expr):
         q = self._build_q(field, expr)
         try:
-            return queryset.filter(q)
+            return queryset.filter(q).distinct()
         except (ValueError, DjangoValidationError):
             raise ValidationError(field.name + ': the given operator or value are inappropriate for this field')
 
