@@ -1,4 +1,4 @@
-"""INFINIDAT Support Portal Event Queue Mechanism
+"""Command line utility for plucking fields from a JSON file.
 
 Usage:
     rest_utils pluck <json-filename> <path>...

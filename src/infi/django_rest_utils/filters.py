@@ -28,6 +28,7 @@ class FilterableField(object):
              it can also be a callable f(field, orm_operator, value) --> Q object
     converter - an optional function to modify the given filter value before passing it to the queryset.
     datatype - the type of values that are expected for this field.
+    advanced - if true, the filter will be used only by InfinidatFilter and not by SimpleFilter
     '''
 
     STRING   = 'string'
@@ -36,14 +37,18 @@ class FilterableField(object):
     BOOLEAN  = 'boolean'
     DATETIME = 'datetime'
 
-    def __init__(self, name, source=None, converter=None, datatype=STRING):
+    def __init__(self, name, source=None, converter=None, datatype=STRING, advanced=False):
         self.name = name
         self.source = source or name
         self.converter = converter or (lambda value: value)
         self.datatype = datatype
+        self.advanced = advanced
 
     def __unicode__(self):
         return self.name
+
+    def __repr__(self):
+        return '<FilterableField name=%s source=%s datatype=%s>' % (self.name, self.source, self.datatype)
 
     def convert(self, value):
         if isinstance(value, list):
@@ -86,18 +91,21 @@ class FilterableField(object):
 
 class Operator(object):
 
-    def __init__(self, name, orm_operator, description='', negate=False, min_vals=1, max_vals=1):
+    def __init__(self, name, orm_operator, description='', negate=False, min_vals=1, max_vals=1, boolean=False):
         self.name = name
         self.orm_operator = orm_operator
         self.description = description
         self.negate = negate
         self.min_vals = min_vals
         self.max_vals = max_vals
+        self.boolean = boolean
 
     def __unicode__(self):
         return self.name
 
     def get_expected_value_description(self):
+        if self.boolean:
+            return 'a single boolean value: 0 or 1'
         if self.max_vals == 1:
             return 'a single value'
         if self.max_vals == self.min_vals:
@@ -177,9 +185,11 @@ class InfinidatFilter(filters.BaseFilterBackend):
         if not filterable_fields:
             return None
         operators = self._get_operators()
+        active_filters = [(f.name, view.request.GET[f.name]) for f in filterable_fields if f.name in view.request.GET]
         context = dict(
             fields=filterable_fields,
             operators=operators,
+            active_filters=active_filters,
             url=view.request.build_absolute_uri(view.request.path)
         )
         return render_to_string('django_rest_utils/infinidat_filter.html', context)
@@ -213,13 +223,14 @@ class InfinidatFilter(filters.BaseFilterBackend):
             Operator('unlike',  'icontains', 'field does not contain a string (case insensitive)', negate=True),
             Operator('in',      'in',        'field is equal to one of the given values', max_vals=1000),
             Operator('out',     'in',        'field is not equal to any of the given values', negate=True, max_vals=1000),
-            Operator('between', 'range',     'field is in a range of two values (inclusive)', min_vals=2, max_vals=2)
+            Operator('between', 'range',     'field is in a range of two values (inclusive)', min_vals=2, max_vals=2),
+            Operator('isnull',  'isnull',    'field is null', boolean=True),
         ]
 
     def _apply_filter(self, queryset, field, expr):
         q = self._build_q(field, expr)
         try:
-            return queryset.filter(q)
+            return queryset.filter(q).distinct()
         except (ValueError, DjangoValidationError):
             raise ValidationError(field.name + ': the given operator or value are inappropriate for this field')
 
@@ -244,7 +255,14 @@ class InfinidatFilter(filters.BaseFilterBackend):
                                       field.name, operator.name, operator.get_expected_value_description()))
             q = field.build_q(operator.orm_operator, vals)
         else:
+            if operator.boolean:
+                try:
+                    value = int(value)
+                except ValueError:
+                    raise ValidationError('{}: "{}" operator expects {}'.format(
+                                          field.name, operator.name, operator.get_expected_value_description()))
             q = field.build_q(operator.orm_operator, value)
+
         return ~q if operator.negate else q
 
 
@@ -253,10 +271,17 @@ class SimpleFilter(object):
     def get_filter_description(self, view, html):
         if not html:
             return None
-        filterable_fields = _get_filterable_fields(view)
+        filterable_fields = [f for f in _get_filterable_fields(view)
+                             if f.datatype in (FilterableField.STRING, FilterableField.INTEGER)
+                             and not f.advanced]
         if not filterable_fields:
             return None
-        return render_to_string('django_rest_utils/simple_filter.html', dict(fields=filterable_fields))
+        context = dict(
+            fields=filterable_fields,
+            url=view.request.build_absolute_uri(view.request.path),
+            terms=view.request.GET.get('q', '')
+        )
+        return render_to_string('django_rest_utils/simple_filter.html', context)
 
     def filter_queryset(self, request, queryset, view):
         terms = _normalize_query(request.GET.get('q', ''))
@@ -264,12 +289,23 @@ class SimpleFilter(object):
             filterable_fields = _get_filterable_fields(view)
             query = None
             for term in terms:
+                numeric = term.isdigit()
                 or_query = None # Query to search for a given term in each field
-                for field in _get_filterable_fields(view):
-                    q = field.build_q('icontains', term)
-                    or_query = or_query | q if or_query else q
+                for field in filterable_fields:
+                    if field.advanced:
+                        continue
+                    try:
+                        if field.datatype == FilterableField.STRING:
+                            q = field.build_q('icontains', term)
+                        elif field.datatype == FilterableField.INTEGER and numeric:
+                            q = field.build_q('exact', term)
+                        else:
+                            continue
+                        or_query = or_query | q if or_query else q
+                    except ValidationError:
+                        pass
                 query = query & or_query if query else or_query
-            queryset = queryset.filter(query)
+            queryset = queryset.filter(query) if query else queryset.none()
         return queryset
 
 
@@ -364,3 +400,12 @@ class OrderingFilter(filters.OrderingFilter):
                     name, ', '.join(ordering_fields_dict.keys())))
             ret += ordering_field.get_terms(descending_order)
         return ret
+
+    def filter_queryset(self, request, queryset, view):
+        # Overridden to always sort also by ctid, which is the physical location of the db table row.
+        # This ensures that the order is unique, allowing to get consistent pagination.
+        # See http://www.postgresql.org/docs/9.3/static/queries-limit.html
+        # Note that this code is PostgreSQL specific.
+        ordering = self.get_ordering(request, queryset, view) or []
+        ordering.append('%s.ctid' % queryset.model._meta.db_table)
+        return queryset.extra(order_by=ordering)

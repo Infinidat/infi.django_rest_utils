@@ -26,6 +26,7 @@ REST_FRAMEWORK = {
         'rest_framework.renderers.BrowsableAPIRenderer',
     ),
     'DEFAULT_FILTER_BACKENDS': (
+        'infi.django_rest_utils.filters.SimpleFilter',
         'infi.django_rest_utils.filters.InfinidatFilter',
         'infi.django_rest_utils.filters.OrderingFilter',
     ),
@@ -56,7 +57,7 @@ The response always contains a JSON object with 3 fields:
 * **metadata** - additional information about the response, for example pagination parameters.
 * **error** - null in case of success, otherwise information about the error.
 
-Also allows plucking (selecting) specific fields of every result (e.g timestamp or parsed_data.system_info.host_count)
+Also allows plucking (selecting) specific fields of every result (e.g timestamp or parsed_data.system_info.host_count).
 Field plucked can be tested against non-plucked json api responses from a file by using the 'rest_utils'
 ``` python
 bin/rest_utils pluck api_response.json timestamp system_serial parsed_data.system_info
@@ -81,6 +82,12 @@ To determine which fields are available for filtering, the class checks whether 
 In case the serializer does not provide such a method, the filterable fields are deduced automatically from the serializer fields.
 
 To use this filter, add `infi.django_rest_utils.filters.InfinidatFilter` to the `DEFAULT_FILTER_BACKENDS` list in the settings.
+
+### SimpleFilter
+
+This type of filter uses the same `FilterableField` definitions that `InfinidatFilter` uses, but searches all string and integer fields for a match (exact match in case of integers, and substring match in case of strings). For example if the search term is *yellow sun*, the filter will return all objects that have both *yellow* and *sun* in any of their filterable fields. If the search term is quoted (*"yellow sun"*), it will be searched without splitting it into words.
+
+The search term should appear in the URL in a query parameter named `q`. It can be used in conjuction with `InfinidatFilter` or separately.
 
 ### OrderingFilter
 A subclass of the default `OrderingFilter` which supports advanced ordering. This is done by checking if the serializer
@@ -139,11 +146,12 @@ Views
 This class can be used to enhance the browsable API with dynamic auto-generated documentation. The documentation is composed from:
 
 * The view's docstring
-* Information about supported output formats, taken from renderers that implement `get_renderer_description(self, html)`
+* Information about authentication, taken from authentication classes that implement `get_authenticator_description(self, view, html)`
+* Information about supported output formats, taken from renderers that implement `get_renderer_description(self, view, html)`
 * Information about filtering and ordering, taken from filters that implement `get_filter_description(self, view, html)`
-* Information about pagination, when the pagination class implements `get_paginator_description(self, html)`
+* Information about pagination, when the pagination class implements `get_paginator_description(self, view, html)`
 
-All renderers, filters and paginators provided by infi.django_rest_utils implement these methods.
+All relevant classes provided by infi.django_rest_utils implement these methods, meaning that detailed documentation is automatically generated when they are used with views that extend `ViewDescriptionMixin`.
 
 To use this mixin, add it as the **first** parent class of your views and viewsets. For example:
 
@@ -179,6 +187,20 @@ CORS_ALLOW_HEADERS = (
     'X-API-Token',
 )
 ```
+
+
+Routers
+=======
+### DefaultRouter
+
+This is a subclass of `rest_framework.routers.DefaultRouter` that provides a richer API root view. The view includes information about authentication as well as a table of contents. Additionally, a name and a description can be provided for the root view:
+```python
+from infi.django_rest_utils.routers import DefaultRouter
+
+router = DefaultRouter(name='Sample API', description='This is a sample API.')
+router.register(...)
+```
+
 
 Developing and Packaging
 ========================

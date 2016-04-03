@@ -26,49 +26,51 @@
         The default sorting order is ascending. To specify descending order, add a minus sign (-) before the field name.
     </p>
 
-    <div class="form-inline" style="margin-bottom: 10px;">
-        <div class="form-group">
-            <label style="width: 75px;">Sort by:</label>
-            <select name="sort-0-field" id="sort-0-field" class="form-control">
-                <option value=""></option>
-                {% for field in fields %}<option value="{{ field.name }}">{{ field.name }}</option>{% endfor %}
-            </select>
-            <select name="sort-0-dir" id="sort-0-dir" class="form-control">
-                <option value="">ascending</option>
-                <option value="-">descending</option>
-            </select>
+    <form onsubmit="sort(); return false;">
+        <div class="form-inline" style="margin-bottom: 10px;">
+            <div class="form-group">
+                <label style="width: 75px;">Sort by:</label>
+                <select name="sort-0-field" id="sort-0-field" class="form-control">
+                    <option value=""></option>
+                    {% for field in fields %}<option value="{{ field.name }}">{{ field.name }}</option>{% endfor %}
+                </select>
+                <select name="sort-0-dir" id="sort-0-dir" class="form-control">
+                    <option value="">ascending</option>
+                    <option value="-">descending</option>
+                </select>
+            </div>
         </div>
-    </div>
 
-    <div class="form-inline" style="margin-bottom: 10px;">
-        <div class="form-group">
-            <label style="width: 75px;">Then by:</label>
-            <select name="sort-1-field" id="sort-1-field" class="form-control">
-                <option value=""></option>
-                {% for field in fields %}<option value="{{ field.name }}">{{ field.name }}</option>{% endfor %}
-            </select>
-            <select name="sort-1-dir" id="sort-1-dir" class="form-control">
-                <option value="">ascending</option>
-                <option value="-">descending</option>
-            </select>
+        <div class="form-inline" style="margin-bottom: 10px;">
+            <div class="form-group">
+                <label style="width: 75px;">Then by:</label>
+                <select name="sort-1-field" id="sort-1-field" class="form-control">
+                    <option value=""></option>
+                    {% for field in fields %}<option value="{{ field.name }}">{{ field.name }}</option>{% endfor %}
+                </select>
+                <select name="sort-1-dir" id="sort-1-dir" class="form-control">
+                    <option value="">ascending</option>
+                    <option value="-">descending</option>
+                </select>
+            </div>
         </div>
-    </div>
 
-    <div class="form-inline" style="margin-bottom: 10px;">
-        <div class="form-group">
-            <label style="width: 75px;">Then by:</label>
-            <select name="sort-2-field" id="sort-2-field" class="form-control">
-                <option value=""></option>
-                {% for field in fields %}<option value="{{ field.name }}">{{ field.name }}</option>{% endfor %}
-            </select>
-            <select name="sort-2-dir" id="sort-2-dir" class="form-control">
-                <option value="">ascending</option>
-                <option value="-">descending</option>
-            </select>
+        <div class="form-inline" style="margin-bottom: 10px;">
+            <div class="form-group">
+                <label style="width: 75px;">Then by:</label>
+                <select name="sort-2-field" id="sort-2-field" class="form-control">
+                    <option value=""></option>
+                    {% for field in fields %}<option value="{{ field.name }}">{{ field.name }}</option>{% endfor %}
+                </select>
+                <select name="sort-2-dir" id="sort-2-dir" class="form-control">
+                    <option value="">ascending</option>
+                    <option value="-">descending</option>
+                </select>
+            </div>
         </div>
-    </div>
 
-    <button class="btn btn-primary" style="margin-left: 80px;" onclick="sort();">Apply</button>
+        <button type="submit" class="btn btn-primary" style="margin-left: 80px;">Apply</button>
+    </form>
 
     {% if default_ordering %}
         <p>
@@ -80,17 +82,7 @@
 
 <script>
 
-    function updateQueryStringParameter(key, value) {
-        var uri = window.location.toString();
-        var re = new RegExp("([?&])" + key + "=.*?(&|$)", "i");
-        var separator = uri.indexOf('?') !== -1 ? "&" : "?";
-        if (uri.match(re)) {
-            return uri.replace(re, '$1' + key + "=" + value + '$2');
-        }
-        else {
-            return uri + separator + key + "=" + value;
-        }
-    }
+    {% include "django_rest_utils/functions.js" %}
 
     function sort() {
         var fields = [];
@@ -103,7 +95,7 @@
     }
 
     document.addEventListener("DOMContentLoaded", function(event) {
-        var ordering = {{ ordering|safe }};
+        var ordering = {{ ordering|default:"[]"|safe }};
         if (ordering.length) {
             for (var i = 0; i < ordering.length; i++) {
                 var field = ordering[i];
