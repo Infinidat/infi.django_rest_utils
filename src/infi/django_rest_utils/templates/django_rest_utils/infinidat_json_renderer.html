@@ -114,4 +114,18 @@
         document.getElementById("pluck_{{ field }}").checked = true;
     {% endfor %}
 
+    function add_raw_button() {
+        var nav = $("<nav/>").css("float", "left");
+        var btn = $("<button/>").attr("class", "btn btn-primary").css("margin-top", "5px").css("z-index", 99).text("Raw");
+        btn.click(function() {
+            delimiter = window.location.href.indexOf("?") == -1 ? "?" : "&";
+            window.location.href = window.location.href + delimiter + "format=json";
+        });
+        btn.appendTo(nav);
+        nav.insertBefore($(".request-info"));
+    }
+    document.addEventListener("DOMContentLoaded", function(event) {
+        add_raw_button();
+    });
+
 </script>
