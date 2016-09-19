@@ -1,4 +1,6 @@
 from rest_framework import metadata
+from django.utils.encoding import force_text
+
 
 class SimpleMetadata(metadata.SimpleMetadata):
 
