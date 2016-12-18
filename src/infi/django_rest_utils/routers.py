@@ -17,7 +17,7 @@ class DefaultRouter(routers.DefaultRouter):
         self.name = name
         self.description = description
 
-    def get_api_root_view(self):
+    def get_api_root_view(self, schema_urls=None):
         """
         Return a view to use as the API root.
         """
