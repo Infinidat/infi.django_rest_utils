@@ -388,17 +388,14 @@ class OrderingFilter(filters.OrderingFilter):
         return sortable_fields
 
     def remove_invalid_fields(self, queryset, fields, view):
-        # Overridden to shout about invalid fields, instead of ignoring them
         ret = []
         ordering_fields_dict = {f.name: f for f in self.get_ordering_fields(view)}
         for field in fields:
             descending_order = (field[0] == '-')
             name = field[1:] if descending_order else field
             ordering_field = ordering_fields_dict.get(name)
-            if ordering_field is None:
-                 raise ValidationError('"{}"" is not a valid ordering field (choices are {})'.format(
-                    name, ', '.join(ordering_fields_dict.keys())))
-            ret += ordering_field.get_terms(descending_order)
+            if ordering_field:
+                ret += ordering_field.get_terms(descending_order)
         return ret
 
     def filter_queryset(self, request, queryset, view):
