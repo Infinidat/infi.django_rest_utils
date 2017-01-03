@@ -45,6 +45,8 @@ class DefaultRouter(routers.DefaultRouter):
                         parts.append(desc)
                 objects_html = "<h3>Objects</h3>"
                 for prefix, viewset, basename in registry:
+                    if '(' in prefix: # The url contains placeholders, so we can't show it
+                        continue
                     func = viewset.settings.VIEW_DESCRIPTION_FUNCTION
                     desc = func(viewset, html)
                     objects_html += "<h4><a href=\"{}\">{}</a></h4>{}".format(prefix, viewset().get_view_name(), desc)
