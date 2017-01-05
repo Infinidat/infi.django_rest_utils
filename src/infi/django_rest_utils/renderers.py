@@ -18,17 +18,6 @@ def _pluck_response(response, renderer_context):
         return dict(metadata=dict(ready=True), result=None, error=dict(message=e.message))
 
 
-def _value_to_id_str(value):
-    if isinstance(value, str):
-        return value
-    if isinstance(value, dict):
-        return str(value.get('id'))
-    elif isinstance(value, list):
-        return ','.join([_value_to_id_str(child) for child in value])
-    else:
-        return str(value)
-
-
 def _replace_nested_with_ids(data):
     return {key: value.get('id') if isinstance(value, dict) else value for key, value in data.items()
        if not isinstance(value, list)}
