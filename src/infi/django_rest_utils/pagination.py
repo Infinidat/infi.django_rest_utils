@@ -32,8 +32,9 @@ class LargeQuerySetPaginator(Paginator):
         # We count tuples in the queryset's table name, as well as possible
         # child partitions such as <table>_y2016m12
         sql = '''
-            SELECT sum(reltuples) FROM pg_class WHERE relname = '{}' or relname like '{}\_y%%';
-            '''
+            SELECT sum(n_live_tup) FROM pg_stat_user_tables 
+            WHERE relname = '{}' or relname like '{}\_y%%';
+        '''
         table = self.object_list.query.model._meta.db_table
         cursor = connections[self.object_list.db].cursor()
         cursor.execute(sql.format(table, table.replace('_', '\\_')))
