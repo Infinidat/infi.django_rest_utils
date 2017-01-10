@@ -387,7 +387,7 @@ class OrderingFilter(filters.OrderingFilter):
             sortable_fields = [OrderingField(name) for name in sortable_fields]
         return sortable_fields
 
-    def remove_invalid_fields(self, queryset, fields, view):
+    def remove_invalid_fields(self, queryset, queryset, fields, view, request):
         ret = []
         ordering_fields_dict = {f.name: f for f in self.get_ordering_fields(view)}
         for field in fields:
