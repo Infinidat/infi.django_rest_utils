@@ -71,15 +71,3 @@ class FlatJSONRenderer(JSONRenderer):
             else:
                 data['result'] = _replace_nested_with_ids(data['result'])
         return super(FlatJSONRenderer, self).render(data, accepted_media_type, renderer_context)
-
-    def get_renderer_description(self, view, html):
-        if not html:
-            return None
-        current_plucking = view.request.GET.get("fields", "")
-        context = dict(
-            renderer=self,
-            fields=view.get_serializer().fields.keys(),
-            current_plucking=current_plucking.split(",") if current_plucking else [],
-            url=view.request.build_absolute_uri(view.request.path)
-        )
-        return render_to_string('django_rest_utils/infinidat_json_renderer.html', context)
