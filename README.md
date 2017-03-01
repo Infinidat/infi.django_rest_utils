@@ -164,6 +164,25 @@ class EmployeeViewSet(ViewDescriptionMixin, viewsets.ReadOnlyModelViewSet):
     queryset = ...
 ```
 
+### QueryTimeLimitMixin
+This mixin limits the time each database query is allowed to run (when generating a list of objects).
+In case of a timeout, HTTP 400 is returned along with an error message which can be specified by
+the view class. 
+
+Note: only PostgreSQL is supported.
+
+```python
+from rest_framework import viewsets
+from infi.django_rest_utils.views import QueryTimeLimitMixin
+
+class BigDataViewSet(QueryTimeLimitMixin, viewsets.ReadOnlyModelViewSet):
+    time_limit = 15 * 1000 # milliseconds
+    timeout_message = 'Database query took too long and was cancelled. Try limiting the query time range.'
+    serializer_class = ...
+    queryset = ...
+```
+
+
 Authentication
 ==============
 ### APITokenAuthentication

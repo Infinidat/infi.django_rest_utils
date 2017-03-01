@@ -16,17 +16,28 @@ class LargeQuerySetPage(Page):
             return super(LargeQuerySetPage, self).has_next()
 
 class LargeQuerySetPaginator(Paginator):
+    '''
+    A paginator that tries to count records efficiently.
+    When there are no conditions on the queryset, it uses an approximate
+    count (getting the number of tuples from pg_class). Otherwise,
+    the count is limited to the value of the QUERY_OBJECT_COUNT_LIMIT settings.
+    '''
+
     def __init__(self, *args, **kwargs):
         super(LargeQuerySetPaginator, self).__init__(*args, **kwargs)
         self.approximated_number_of_objects = False
         self.limited_number_of_objects = False
 
     def _get_approximate_count_for_all_objects(self):
+        # We count tuples in the queryset's table name, as well as possible
+        # child partitions such as <table>_y2016m12
         sql = '''
-            SELECT reltuples FROM pg_class WHERE relname = '%s';
-            '''
+            SELECT sum(n_live_tup) FROM pg_stat_user_tables 
+            WHERE relname = '{}' or relname like '{}\_y%%';
+        '''
+        table = self.object_list.query.model._meta.db_table
         cursor = connections[self.object_list.db].cursor()
-        cursor.execute(sql % self.object_list.query.model._meta.db_table)
+        cursor.execute(sql.format(table, table.replace('_', '\\_')))
         result = int(cursor.fetchone()[0])
         if result:
             self.approximated_number_of_objects = True
@@ -93,6 +104,7 @@ class LargeQuerySetPaginator(Paginator):
 
 
 class InfinidatPaginationSerializer(pagination.PageNumberPagination):
+
     def get_paginated_response(self, data):
         paginator = self.page.paginator
         return Response(OrderedDict([
@@ -120,6 +132,7 @@ class InfinidatPaginationSerializer(pagination.PageNumberPagination):
 
 
 class InfinidatLargeSetPaginationSerializer(InfinidatPaginationSerializer):
+
     def paginate_queryset(self, queryset, request, view=None):
         """
         Paginate a queryset if required, either returning a

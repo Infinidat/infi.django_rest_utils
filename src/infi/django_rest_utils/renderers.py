@@ -18,25 +18,34 @@ def _pluck_response(response, renderer_context):
         return dict(metadata=dict(ready=True), result=None, error=dict(message=e.message))
 
 
+def _replace_nested_with_ids(data):
+    return {key: value.get('id') if isinstance(value, dict) else value for key, value in data.items()
+       if not isinstance(value, list)}
+
+def _render_to_json_obj(self, data, accepted_media_type, renderer_context):
+    metadata = dict(ready=True)
+    status = renderer_context['response'].status_code
+    if status > 399 and 'detail' in data:
+        # Error with details
+        data = dict(metadata=metadata, result=None, error=dict(message=data['detail']))
+    elif status == 400:
+        # Bad request
+        error = dict(message='Bad request', details=data)
+        data = dict(metadata=metadata, result=None, error=error)
+    elif data and 'page' in data:
+        # Paginated results
+        metadata.update(data)
+        data = _pluck_response(dict(metadata=metadata, result=metadata.pop('results')), renderer_context)
+    else:
+        # Non-paginated results
+        data = _pluck_response(dict(metadata=metadata, result=data), renderer_context)
+    return data
+
+
 class InfinidatJSONRenderer(JSONRenderer):
 
     def render(self, data, accepted_media_type=None, renderer_context=None):
-        metadata = dict(ready=True)
-        status = renderer_context['response'].status_code
-        if status > 399 and 'detail' in data:
-            # Error with details
-            data = dict(metadata=metadata, result=None, error=dict(message=data['detail']))
-        elif status == 400:
-            # Bad request
-            error = dict(message='Bad request', details=data)
-            data = dict(metadata=metadata, result=None, error=error)
-        elif data and 'page' in data:
-            # Paginated results
-            metadata.update(data)
-            data = _pluck_response(dict(metadata=metadata, result=metadata.pop('results')), renderer_context)
-        else:
-            # Non-paginated results
-            data = _pluck_response(dict(metadata=metadata, result=data), renderer_context)
+        data = _render_to_json_obj(self, data, accepted_media_type, renderer_context)
         return super(InfinidatJSONRenderer, self).render(data, accepted_media_type, renderer_context)
 
     def get_renderer_description(self, view, html):
@@ -50,3 +59,15 @@ class InfinidatJSONRenderer(JSONRenderer):
             url=view.request.build_absolute_uri(view.request.path)
         )
         return render_to_string('django_rest_utils/infinidat_json_renderer.html', context)
+
+
+class FlatJSONRenderer(JSONRenderer):
+    format = 'flatjson'
+    def render(self, data, accepted_media_type=None, renderer_context=None):
+        data = _render_to_json_obj(self, data, accepted_media_type, renderer_context)
+        if data['result']:
+            if isinstance(data['result'], list):
+                data['result'] = [_replace_nested_with_ids(entry) for entry in data['result']]
+            else:
+                data['result'] = _replace_nested_with_ids(data['result'])
+        return super(FlatJSONRenderer, self).render(data, accepted_media_type, renderer_context)
