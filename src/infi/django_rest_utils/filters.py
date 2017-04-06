@@ -10,7 +10,7 @@ from rest_framework.exceptions import ValidationError
 from collections import OrderedDict
 
 
-IGNORE = [
+DEFAULT_IGNORE = [
     settings.REST_FRAMEWORK['ORDERING_PARAM'],
     'fields',
     'page',
@@ -196,8 +196,9 @@ class InfinidatFilter(filters.BaseFilterBackend):
 
     def filter_queryset(self, request, queryset, view):
         filterable_fields = _get_filterable_fields(view)
+        ignored_fields = self._get_ignored_fields(view)
         for field_name in request.GET.keys():
-            if field_name in IGNORE:
+            if field_name in ignored_fields:
                 continue
             field = None
             for f in filterable_fields:
@@ -210,6 +211,9 @@ class InfinidatFilter(filters.BaseFilterBackend):
             for expr in request.GET.getlist(field_name):
                 queryset = self._apply_filter(queryset, field, expr)
         return queryset
+
+    def _get_ignored_fields(self, view):
+        return getattr(view, 'non_filtering_fields', DEFAULT_IGNORE)
 
     def _get_operators(self):
         return [
