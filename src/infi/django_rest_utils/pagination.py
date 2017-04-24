@@ -59,8 +59,7 @@ class LargeQuerySetPaginator(Paginator):
                 self._count = self._get_limited_count()
             else:
                 # https://wiki.postgresql.org/wiki/Slow_Counting
-                # specifically, we can give an approximate count for all the rows in the table, or,
-                # in other words, how many events we have in the store
+                # specifically, we can give an approximate count for all the rows in the table
                 self._count = self._get_approximate_count_for_all_objects()
         return self._count
 
