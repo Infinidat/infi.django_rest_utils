@@ -1,0 +1,30 @@
+<h3>
+    Streaming
+    <button class="btn btn-default btn-sm" type="button" data-toggle="collapse" data-target="#streaming-collapse"><i class="glyphicon glyphicon-chevron-down"></i></button>
+</h3>
+
+<div class="collapse" id="streaming-collapse">
+
+    <p>
+        Instead of pagination, it is possible to get a streaming response
+        by adding <code>stream=true</code> to the URL query parameters.
+        This is more efficient than pagination because the server does not
+        generate the whole response before sending it to the client, so
+        memory consumption remains low even when the response is very large.
+    </p>
+
+    <p>
+        To take full advantage of the streaming response on the client side,
+        it is recommended to use an iterative JSON parser such as
+        <a href="https://pypi.org/project/ijson/" target="_blank">ijson</a>.
+    </p>
+
+    <p>
+        Notes:
+    </p>
+    <ul>
+        <li>Streaming does not change the format of the response.</li>
+        <li>Only responses containing lists of objects can be streamed.</li>
+    </ul>
+
+</div>

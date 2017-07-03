@@ -16,7 +16,8 @@ DEFAULT_IGNORE = [
     'page',
     'page_size',
     'format',
-    'q'
+    'q',
+    'stream'
 ]
 
 

@@ -167,7 +167,7 @@ class EmployeeViewSet(ViewDescriptionMixin, viewsets.ReadOnlyModelViewSet):
 ### QueryTimeLimitMixin
 This mixin limits the time each database query is allowed to run (when generating a list of objects).
 In case of a timeout, HTTP 400 is returned along with an error message which can be specified by
-the view class. 
+the view class.
 
 Note: only PostgreSQL is supported.
 
@@ -182,6 +182,21 @@ class BigDataViewSet(QueryTimeLimitMixin, viewsets.ReadOnlyModelViewSet):
     queryset = ...
 ```
 
+### StreamingMixin
+A view mixin that enables streaming of object lists. This is more efficient than pagination because the server does not generate the whole response before sending it to the client, so memory consumption remains low even when the response is very large.
+
+To get a streaming response instead of a paginated response, the client needs to add `stream=true` to the URL query parameters.
+
+To use this mixin, add it as the **first** parent class of your views and viewsets. For example:
+
+```python
+from rest_framework import viewsets
+from infi.django_rest_utils.views import StreamingMixin, ViewDescriptionMixin
+
+class EmployeeViewSet(StreamingMixin, ViewDescriptionMixin, viewsets.ReadOnlyModelViewSet):
+    serializer_class = ...
+    queryset = ...
+```
 
 Authentication
 ==============

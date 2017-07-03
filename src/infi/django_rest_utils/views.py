@@ -1,6 +1,10 @@
 from django.utils.safestring import mark_safe
+from django.template.loader import render_to_string
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse
+from django.http import HttpResponse, StreamingHttpResponse
+import json
+
+from infi.django_rest_utils.pluck import pluck_result
 
 
 class ViewDescriptionMixin(object):
@@ -11,8 +15,14 @@ class ViewDescriptionMixin(object):
         and in the browsable API.
         """
         parts = ['<section class="docs">']
+        parts += self._get_view_description_parts(html)
+        parts.append('</section>')
+        return mark_safe('\n'.join([part for part in parts if part]))
+
+    def _get_view_description_parts(self, html):
+
         func = self.settings.VIEW_DESCRIPTION_FUNCTION
-        parts.append(func(self.__class__, html))
+        parts = [func(self.__class__, html)]
 
         for authenticator in self.get_authenticators():
             if hasattr(authenticator, 'get_authenticator_description'):
@@ -33,8 +43,11 @@ class ViewDescriptionMixin(object):
             desc = self.paginator.get_paginator_description(self, html)
             parts.append(desc)
 
-        parts.append('</section>')
-        return mark_safe('\n'.join([part for part in parts if part]))
+        if isinstance(self, StreamingMixin):
+            parts.append(render_to_string('django_rest_utils/infinidat_streaming.html', {}))
+
+        return parts
+
 
 
 class QueryTimeLimitMixin(object):
@@ -51,12 +64,41 @@ class QueryTimeLimitMixin(object):
             try:
                 cursor.execute('SET statement_timeout = %s', [self.time_limit])
                 return super(QueryTimeLimitMixin, self).list(request, *args, **kwargs)
-            except OperationalError, e: 
+            except OperationalError, e:
                 if 'statement timeout' in e.message:
                     raise ValidationError(self.timeout_message)
                 raise
             finally:
                 cursor.execute('SET statement_timeout = DEFAULT')
+
+
+
+class StreamingMixin(object):
+    '''
+    A mixin for streaming objects as a JSON array, without pagination.
+    This prevents the need to serialize the whole reponse (which might be
+    very large) into memory.
+    To activate streaming, the request query parameters must include
+    "stream=1" or "stream=true"
+    '''
+
+    def list(self, request, *args, **kwargs):
+        if request.GET.get('stream', '').lower() not in ('1', 'true'):
+            return super(StreamingMixin, self).list(request, *args, **kwargs)
+        else:
+            return StreamingHttpResponse(self._stream(request), content_type='application/json')
+
+    def _stream(self, request):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset)
+        field_list = request.query_params.getlist('fields')
+        yield '{"error": null,\n"result": ['
+        first = True
+        for obj in queryset.iterator():
+            yield '\n' if first else ',\n'
+            yield json.dumps(pluck_result(serializer.to_representation(obj), field_list))
+            first = False
+        yield '\n], "metadata": {"ready": true}}'
 
 
 @login_required
