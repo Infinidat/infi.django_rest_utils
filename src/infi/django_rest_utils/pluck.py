@@ -1,5 +1,6 @@
 from itertools import chain
 
+
 def collect_items_from_string_lists(lists, delimiter=','):
     '''
     A fancy way to flatten a list of comma seperated lists into one list of strings
@@ -11,6 +12,7 @@ DELIMITER = '.'
 
 def fragments(path):
     return [x for x in path.split(DELIMITER) if x != '']
+
 
 def traverse(path, d, prefix=''):
     '''
@@ -54,15 +56,16 @@ def traverse(path, d, prefix=''):
             break
         break
 
-
     return [(DELIMITER.join(prefix + path), None)]
 
 
 
 def pluck_result(result, field_list):
+    if not field_list:
+        return result
     if isinstance(result, list):
         return [pluck_result(x, field_list) for x in result]
-    if not isinstance(result, dict) or len(field_list) == 0:
+    if not isinstance(result, dict):
         return result
     key_value_pairs = chain(*(traverse(field, result) for field in collect_items_from_string_lists(field_list)))
-    return {k: v for (k, v) in key_value_pairs}
+    return dict(key_value_pairs)
