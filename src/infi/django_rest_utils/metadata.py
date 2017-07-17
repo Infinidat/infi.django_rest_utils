@@ -21,9 +21,6 @@ class SimpleMetadata(metadata.SimpleMetadata):
     def should_detail_choices(self, field, field_info):
         if field_info.get('read_only'):
             return False
-        if not hasattr(field, 'choices'):
-            return False
-
         if isinstance(field, (serializers.RelatedField, serializers.ManyRelatedField)):
             approx_number_of_objects = get_approximate_count_for_all_objects(
                 connections[field.queryset.db].cursor(),
@@ -33,8 +30,7 @@ class SimpleMetadata(metadata.SimpleMetadata):
                     return approx_number_of_objects < settings.MAX_CHOICES_TO_DETAIL_IN_API_META
                 else:
                     return queryset.count() < settings.MAX_CHOICES_TO_DETAIL_IN_API_META
-            else:
-                return True
+        return hasattr(field, 'choices')
 
     def get_field_info(self, field):
         """
