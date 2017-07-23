@@ -90,7 +90,7 @@
         $('#advanced_filters input').each(function() {
             var input = $(this);
             if (input.val()) {
-                var value = input.prev().val() + ':' + input.val();
+                var value = input.prev().val() + ':' + encodeURIComponent(input.val());
                 uri = updateQueryStringParameter(input.attr('name'), value, uri);
             }
             else {
@@ -109,7 +109,7 @@
             filter_value = filter_value.slice(colon_location + 1);
         }
         document.getElementById('filter_{{ filter.0 }}_op').value = operator;
-        document.getElementById('filter_{{ filter.0 }}_val').value = filter_value;
+        document.getElementById('filter_{{ filter.0 }}_val').value = convertHTMLEntities(filter_value);
     {% endfor %}
 
 </script>

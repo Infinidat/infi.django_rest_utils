@@ -40,7 +40,7 @@
     {% include "django_rest_utils/functions.js" %}
 
     function simple_search() {
-        window.location = updateQueryStringParameter('q', $('#simplefilter_q').val());
+        window.location = updateQueryStringParameter('q', encodeURIComponent($('#simplefilter_q').val()));
     }
 
 </script>
