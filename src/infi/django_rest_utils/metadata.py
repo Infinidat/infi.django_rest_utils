@@ -1,5 +1,10 @@
 from rest_framework import metadata
 from django.utils.encoding import force_text
+from .utils import get_approximate_count_for_all_objects
+from rest_framework import exceptions, serializers
+from django.db import connections
+from django.conf import settings
+
 
 
 class SimpleMetadata(metadata.SimpleMetadata):
@@ -13,6 +18,20 @@ class SimpleMetadata(metadata.SimpleMetadata):
         actions['GET'] = self.get_serializer_info(view.get_serializer())
         return actions
 
+    def should_detail_choices(self, field, field_info):
+        if field_info.get('read_only'):
+            return False
+        if isinstance(field, (serializers.RelatedField, serializers.ManyRelatedField)):
+            approx_number_of_objects = get_approximate_count_for_all_objects(
+                connections[field.queryset.db].cursor(),
+                field.queryset.model._meta.db_table)
+            if hasattr(settings, 'MAX_CHOICES_TO_DETAIL_IN_API_META'):
+                if approx_number_of_objects:
+                    return approx_number_of_objects < settings.MAX_CHOICES_TO_DETAIL_IN_API_META
+                else:
+                    return queryset.count() < settings.MAX_CHOICES_TO_DETAIL_IN_API_META
+        return hasattr(field, 'choices')
+
     def get_field_info(self, field):
         """
         Overrides SimpleMetadata.get_field_info since the above was tweaked to prevent it from displaying related field
@@ -22,8 +41,7 @@ class SimpleMetadata(metadata.SimpleMetadata):
 
         """
         field_info = super(SimpleMetadata, self).get_field_info(field)
-
-        if not field_info.get('read_only') and hasattr(field, 'choices'):
+        if self.should_detail_choices(field, field_info):
             field_info['choices'] = [
                 {
                     'value': choice_value,

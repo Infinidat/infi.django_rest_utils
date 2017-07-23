@@ -28,3 +28,9 @@ function removeQueryStringParameter(key, uri) {
     }
     return rtn;
 }
+
+function convertHTMLEntities(html) {
+    var txt = document.createElement("textarea");
+    txt.innerHTML = html;
+    return txt.value;
+}

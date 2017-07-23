@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from rest_framework.exceptions import NotFound
 from django.conf import settings
 from django.db import connections
+from .utils import get_approximate_count_for_all_objects
 
 
 class LargeQuerySetPage(Page):
@@ -28,21 +29,6 @@ class LargeQuerySetPaginator(Paginator):
         self.approximated_number_of_objects = False
         self.limited_number_of_objects = False
 
-    def _get_approximate_count_for_all_objects(self):
-        # We count tuples in the queryset's table name, as well as possible
-        # child partitions such as <table>_y2016m12
-        sql = '''
-            SELECT sum(n_live_tup) FROM pg_stat_user_tables 
-            WHERE relname = '{}' or relname like '{}\_y%%';
-        '''
-        table = self.object_list.query.model._meta.db_table
-        cursor = connections[self.object_list.db].cursor()
-        cursor.execute(sql.format(table, table.replace('_', '\\_')))
-        result = int(cursor.fetchone()[0])
-        if result:
-            self.approximated_number_of_objects = True
-            return result
-        return self.object_list.count()
 
     def _get_limited_count(self):
         # Postgres is not good at counting, so we're limiting the count
@@ -60,7 +46,13 @@ class LargeQuerySetPaginator(Paginator):
             else:
                 # https://wiki.postgresql.org/wiki/Slow_Counting
                 # specifically, we can give an approximate count for all the rows in the table
-                self._count = self._get_approximate_count_for_all_objects()
+                approximation = get_approximate_count_for_all_objects(
+                    connections[self.object_list.db].cursor(),
+                    self.object_list.query.model._meta.db_table)
+                if approximation:
+                    self._count = approximation
+                else:
+                    self._count = self.object_list.count()
         return self._count
 
     def validate_number(self, number):
