@@ -21,7 +21,7 @@ class SimpleMetadata(metadata.SimpleMetadata):
     def should_detail_choices(self, field, field_info):
         if field_info.get('read_only'):
             return False
-        if isinstance(field, (serializers.RelatedField, serializers.ManyRelatedField)):
+        if isinstance(field, serializers.RelatedField):
             approx_number_of_objects = get_approximate_count_for_all_objects(
                 connections[field.queryset.db].cursor(),
                 field.queryset.model._meta.db_table)
