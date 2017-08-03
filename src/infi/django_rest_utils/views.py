@@ -1,11 +1,13 @@
 from django.utils.safestring import mark_safe
 from django.template.loader import render_to_string
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse, StreamingHttpResponse
+from django.http import HttpResponse, StreamingHttpResponse, HttpResponseBadRequest
+from django.db.models.fields.related import RelatedField
+from rest_framework.exceptions import APIException
 import json
-
-from infi.django_rest_utils.pluck import pluck_result
-
+from functools import partial
+from infi.django_rest_utils.pluck import pluck_result, collect_items_from_string_lists
+from .utils import extract_csv_writer_params, to_csv_row
 
 class ViewDescriptionMixin(object):
 
@@ -83,13 +85,14 @@ class StreamingMixin(object):
     '''
 
     def list(self, request, *args, **kwargs):
-        if request.GET.get('stream', '').lower() not in ('1', 'true'):
+        if request.GET.get('format', '').lower() == 'csv':
+            return self.create_stream_csv_response(request)
+        elif request.GET.get('stream', '').lower() not in ('1', 'true'):
             return super(StreamingMixin, self).list(request, *args, **kwargs)
         else:
-            return StreamingHttpResponse(self._stream(request), content_type='application/json')
+            return StreamingHttpResponse(self._stream_json(request), content_type='application/json')
 
-    def _stream(self, request):
-        queryset = self.filter_queryset(self.get_queryset())
+    def _stream_json(self, request):
         serializer = self.get_serializer(queryset)
         field_list = request.query_params.getlist('fields')
         yield '{"error": null,\n"result": ['
@@ -99,6 +102,33 @@ class StreamingMixin(object):
             yield json.dumps(pluck_result(serializer.to_representation(obj), field_list))
             first = False
         yield '\n], "metadata": {"ready": true}}'
+
+    def create_stream_csv_response(self, request):
+        try:
+            queryset = self.filter_queryset(self.get_queryset())
+            csv_writer_params = extract_csv_writer_params(request.GET)
+            model_meta = queryset.model._meta
+            field_list_param = request.query_params.getlist('fields')
+            if field_list_param:
+                field_list = collect_items_from_string_lists(field_list_param)
+            else:
+                field_list = [x.name for x in model_meta.get_fields()]
+            def _flat_field_name(field_name):
+                if isinstance(model_meta.get_field(field_name), RelatedField):
+                    return field_name + '_id'
+                return field_name
+            flat_field_list = [_flat_field_name(field_name) for field_name in field_list]
+            return StreamingHttpResponse(self._stream_csv(queryset, csv_writer_params, flat_field_list),
+                                         content_type='text/csv')
+        except Exception as e:
+            return HttpResponseBadRequest("AAAA")
+
+    def _stream_csv(self, queryset, csv_writer_params, field_list):
+        yield to_csv_row(field_list, **csv_writer_params)
+        for obj in queryset.iterator():
+            value_list = [getattr(obj, f) for f in field_list]
+            yield to_csv_row(value_list, **csv_writer_params)
+
 
 
 @login_required
