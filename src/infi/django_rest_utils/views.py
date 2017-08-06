@@ -86,13 +86,17 @@ class StreamingMixin(object):
 
     def list(self, request, *args, **kwargs):
         if request.GET.get('format', '').lower() == 'csv':
-            return self.create_stream_csv_response(request)
+            response_generator = create_stream_csv_response_iterator(self.filter_queryset(self.get_queryset()),
+                                                                          request)
+            return StreamingHttpResponse(response_generator, content_type='text/csv')
         elif request.GET.get('stream', '').lower() not in ('1', 'true'):
             return super(StreamingMixin, self).list(request, *args, **kwargs)
         else:
-            return StreamingHttpResponse(self._stream_json(request), content_type='application/json')
+            queryset = self.filter_queryset(self.get_queryset())
+            return StreamingHttpResponse(self._stream_json(request, queryset),
+                                         content_type='application/json')
 
-    def _stream_json(self, request):
+    def _stream_json(self, request, queryset):
         serializer = self.get_serializer(queryset)
         field_list = request.query_params.getlist('fields')
         yield '{"error": null,\n"result": ['
@@ -103,31 +107,27 @@ class StreamingMixin(object):
             first = False
         yield '\n], "metadata": {"ready": true}}'
 
-    def create_stream_csv_response(self, request):
-        try:
-            queryset = self.filter_queryset(self.get_queryset())
-            csv_writer_params = extract_csv_writer_params(request.GET)
-            model_meta = queryset.model._meta
-            field_list_param = request.query_params.getlist('fields')
-            if field_list_param:
-                field_list = collect_items_from_string_lists(field_list_param)
-            else:
-                field_list = [x.name for x in model_meta.get_fields()]
-            def _flat_field_name(field_name):
-                if isinstance(model_meta.get_field(field_name), RelatedField):
-                    return field_name + '_id'
-                return field_name
-            flat_field_list = [_flat_field_name(field_name) for field_name in field_list]
-            return StreamingHttpResponse(self._stream_csv(queryset, csv_writer_params, flat_field_list),
-                                         content_type='text/csv')
-        except Exception as e:
-            return HttpResponseBadRequest("AAAA")
 
-    def _stream_csv(self, queryset, csv_writer_params, field_list):
-        yield to_csv_row(field_list, **csv_writer_params)
-        for obj in queryset.iterator():
-            value_list = [getattr(obj, f) for f in field_list]
-            yield to_csv_row(value_list, **csv_writer_params)
+def create_stream_csv_response_iterator(queryset, request):
+    csv_writer_params = extract_csv_writer_params(request.GET)
+    model_meta = queryset.model._meta
+    field_list_param = request.query_params.getlist('fields')
+    if field_list_param:
+        field_list = collect_items_from_string_lists(field_list_param)
+    else:
+        field_list = [x.name for x in model_meta.get_fields()]
+    def _flat_field_name(field_name):
+        if isinstance(model_meta.get_field(field_name), RelatedField):
+            return field_name + '_id'
+        return field_name
+    flat_field_list = [_flat_field_name(field_name) for field_name in field_list]
+    return _stream_csv(queryset, csv_writer_params, flat_field_list)
+
+def _stream_csv(queryset, csv_writer_params, field_list):
+    yield to_csv_row(field_list, **csv_writer_params)
+    for obj in queryset.iterator():
+        value_list = [getattr(obj, f) for f in field_list]
+        yield to_csv_row(value_list, **csv_writer_params)
 
 
 

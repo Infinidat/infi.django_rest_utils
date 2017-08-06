@@ -85,5 +85,10 @@ class DummyCSVRenderer(BaseRenderer):
     format = 'csv'
     media_type = 'text/csv'
 
-    def render(self, data):
-        raise ValidationError('Setting format to csv is not supported on views that do not inherit StreamMixin')
+    def render(self, data, accepted_media_type=None, renderer_context=None):
+        status = renderer_context['response'].status_code
+        if status > 399:
+            return ''.join(data)
+        else:
+            return 'Setting format to csv is not supported on views that do not inherit StreamMixin'
+
