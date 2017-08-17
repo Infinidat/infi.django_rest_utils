@@ -114,7 +114,7 @@ def create_stream_csv_response_iterator(queryset, request):
     if field_list_param:
         field_list = collect_items_from_string_lists(field_list_param)
     else:
-        field_list = [x for x in model_meta.get_fields() if x.concrete]
+        field_list = [x for x in model_meta.get_fields() if x.concrete and not x.many_to_many and not x.many_to_one]
     def _flat_field_name(field):
         if field.is_relation or field.one_to_one:
             return field_name.name + '_id'
