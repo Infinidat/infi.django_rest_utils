@@ -7,7 +7,7 @@ from rest_framework.exceptions import APIException
 import json
 from functools import partial
 from infi.django_rest_utils.pluck import pluck_result, collect_items_from_string_lists
-from .utils import extract_csv_writer_params, to_csv_row
+from .utils import to_csv_row
 
 class ViewDescriptionMixin(object):
 
@@ -109,26 +109,25 @@ class StreamingMixin(object):
 
 
 def create_stream_csv_response_iterator(queryset, request):
-    csv_writer_params = extract_csv_writer_params(request.GET)
     model_meta = queryset.model._meta
     field_list_param = request.query_params.getlist('fields')
     if field_list_param:
         field_list = collect_items_from_string_lists(field_list_param)
     else:
-        field_list = [x.name for x in model_meta.get_fields()]
-    def _flat_field_name(field_name):
-        if isinstance(model_meta.get_field(field_name), RelatedField):
-            return field_name + '_id'
-        return field_name
+        field_list = [x for x in model_meta.get_fields() if x.concrete]
+    def _flat_field_name(field):
+        if field.is_relation or field.one_to_one:
+            return field_name.name + '_id'
+        return field_name.name
     flat_field_list = [_flat_field_name(field_name) for field_name in field_list]
-    return _stream_csv(queryset, csv_writer_params, flat_field_list)
+    return _stream_csv(queryset, flat_field_list)
 
-def _stream_csv(queryset, csv_writer_params, field_list):
-    yield to_csv_row(field_list, **csv_writer_params)
+
+def _stream_csv(queryset, field_list):
+    yield to_csv_row(field_list)
     for obj in queryset.iterator():
         value_list = [getattr(obj, f) for f in field_list]
-        yield to_csv_row(value_list, **csv_writer_params)
-
+        yield to_csv_row(value_list)
 
 
 @login_required

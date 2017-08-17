@@ -12,15 +12,10 @@ def get_approximate_count_for_all_objects(cursor, table):
     cursor.execute(sql.format(table, table.replace('_', '\\_')))
     return int(cursor.fetchone()[0])
 
-def extract_csv_writer_params(request_params):
-    from functools import partial
-    return dict(delimiter=request_params.get('csv_delimiter', ',').encode(),
-                quotechar=request_params.get('csv_quotechar', '"').encode(),
-                quoting=getattr(unicodecsv, request_params.get('csv_quoting', 'QUOTE_MINIMAL')))
 
-def to_csv_row(vals, **kwargs):
+def to_csv_row(vals):
     from io import BytesIO
     bio = BytesIO()
-    writer = unicodecsv.writer(bio, **kwargs)
+    writer = unicodecsv.writer(bio)
     writer.writerow(vals)
     return bio.getvalue()
