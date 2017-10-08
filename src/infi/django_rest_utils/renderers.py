@@ -1,6 +1,7 @@
 from django.template.loader import render_to_string
 
-from rest_framework.renderers import JSONRenderer
+from rest_framework.renderers import JSONRenderer, BaseRenderer
+from rest_framework.exceptions import ValidationError
 from infi.django_rest_utils.pluck import pluck_result
 from itertools import chain
 
@@ -76,3 +77,18 @@ class FlatJSONRenderer(JSONRenderer):
             else:
                 data['result'] = _replace_nested_with_ids(data['result'])
         return super(FlatJSONRenderer, self).render(data, accepted_media_type, renderer_context)
+
+
+class DummyCSVRenderer(BaseRenderer):
+    # A class only for gracefull degradation of the case where one sends format=csv without stream=1 (too late to stream
+    # if arrived here and pagination makes no sense)
+    format = 'csv'
+    media_type = 'text/csv'
+
+    def render(self, data, accepted_media_type=None, renderer_context=None):
+        status = renderer_context['response'].status_code
+        if status > 399:
+            return ''.join(data)
+        else:
+            return 'Setting format to csv is not supported on views that do not inherit StreamMixin'
+

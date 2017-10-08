@@ -17,9 +17,8 @@ DEFAULT_IGNORE = [
     'page_size',
     'format',
     'q',
-    'stream'
+    'stream',
 ]
-
 
 class FilterableField(object):
     '''

@@ -1,3 +1,7 @@
+import unicodecsv
+
+
+
 def get_approximate_count_for_all_objects(cursor, table):
     # We count tuples in the queryset's table name, as well as possible
     # child partitions such as <table>_y2016m12
@@ -7,3 +11,11 @@ def get_approximate_count_for_all_objects(cursor, table):
     '''
     cursor.execute(sql.format(table, table.replace('_', '\\_')))
     return int(cursor.fetchone()[0])
+
+
+def to_csv_row(vals):
+    from io import BytesIO
+    bio = BytesIO()
+    writer = unicodecsv.writer(bio)
+    writer.writerow(vals)
+    return bio.getvalue()
