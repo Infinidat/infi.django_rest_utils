@@ -13,9 +13,17 @@ def get_approximate_count_for_all_objects(cursor, table):
     return int(cursor.fetchone()[0])
 
 
-def to_csv_row(vals):
+def to_csv_row(field_list, dct):
     from io import BytesIO
     bio = BytesIO()
     writer = unicodecsv.writer(bio)
-    writer.writerow(vals)
+    writer.writerow([dct[f] for f in field_list])
     return bio.getvalue()
+
+def composition(*args):
+    def f(obj):
+        output = obj
+        for g in args:
+            output = g(output)
+        return output
+    return f
