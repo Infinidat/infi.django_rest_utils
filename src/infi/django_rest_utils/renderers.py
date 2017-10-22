@@ -90,5 +90,5 @@ class DummyCSVRenderer(BaseRenderer):
         if status > 399:
             return ''.join(data)
         else:
-            return 'Setting format to csv is not supported on views that do not inherit StreamMixin'
+            raise ValueError('Setting format to csv is not supported on views that do not inherit StreamMixin')
 
