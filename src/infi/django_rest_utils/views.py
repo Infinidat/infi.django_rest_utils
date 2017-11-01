@@ -138,7 +138,7 @@ class StreamingMixin(object):
         else:
             content_type = 'application/json'
             header = '{"error": null, "metadata": {"ready": true}, "result": [\n'
-            footer = '\n]}'
+            footer = ',\n]}'
             delimiter = ',\n'
             dict_renderering_function = json.dumps
             extension = 'json'
