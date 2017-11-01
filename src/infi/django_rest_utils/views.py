@@ -161,10 +161,9 @@ class StreamingMixin(object):
         with_header_and_footer = chain(
             repeat(header, 1), # header
             islice(rendered_queryset_iterator, 1), # first "row", no trailing delimiter
-            with_leading_delimiters, # rest of the roes with a delimiter before each one
+            with_leading_delimiters, # rest of the rows with a delimiter before each one
             repeat(footer, 1) # footer
         )
-
         response = StreamingHttpResponse(with_header_and_footer, content_type=content_type)
         response['Content-Disposition'] = self._infer_content_disposition(extension)
         return response
