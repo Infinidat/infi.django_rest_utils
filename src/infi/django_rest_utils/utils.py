@@ -27,3 +27,13 @@ def composition(*args):
             output = g(output)
         return output
     return f
+
+def wrap_with_try_except(f, on_except=None, logger=None):
+    def g(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except Exception as e:
+            if logger:
+                logger.error(e)
+            return on_except(e) if on_except else None
+    return g

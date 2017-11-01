@@ -9,9 +9,11 @@ import json
 from functools import partial
 from itertools import repeat, chain, imap, izip, islice
 from infi.django_rest_utils.pluck import pluck_result, collect_items_from_string_lists
-from .utils import to_csv_row, composition
+from .utils import to_csv_row, composition, wrap_with_try_except
 from django.utils.encoding import escape_uri_path
+import logging
 
+logger = logging.getLogger(__name__)
 class ViewDescriptionMixin(object):
 
     def get_view_description(self, html=False):
@@ -148,8 +150,11 @@ class StreamingMixin(object):
             partial(pluck_result, field_list=field_list), # pluck fields from dict
             dict_renderering_function # dict => str
         )
+        safe_rendering_function = wrap_with_try_except(renderering_function,
+                                                       on_except= lambda e: json.dumps({'error': e.message}),
+                                                       logger=logger)
         # map every model object to its string representation
-        rendered_queryset_iterator = imap(renderering_function, queryset.iterator())
+        rendered_queryset_iterator = imap(safe_rendering_function, queryset.iterator())
 
         # Add a delimiter -before- every "row"
         # The chain and zip pattern is common for combining two iterators in a round robin fasion
