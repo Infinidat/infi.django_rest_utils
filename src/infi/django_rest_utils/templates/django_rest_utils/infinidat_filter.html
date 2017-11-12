@@ -18,29 +18,17 @@
     <p>The following fields can be used for filtering:</p>
     <form onsubmit="advanced_search(); return false;">
         <table class="table" style="width: auto;" id="advanced_filters">
+            <tbody id="fields_table">
+
+
+            </tbody>
             <tbody>
-                {% for field in fields %}
-                    <tr>
-                        <th style="vertical-align: middle;">{{ field.name }}</th>
-                        <td>
-                            <div class="form-inline">
-                                <div class="form-group">
-                                    <select class="form-control" id="filter_{{ field.name }}_op">
-                                        {% for operator in operators %}
-                                            <option value="{{ operator }}">{{ operator }}</option>
-                                        {% endfor %}
-                                    </select>
-                                    <input class="form-control" id="filter_{{ field.name }}_val" name="{{ field.name }}">
-                                </div>
-                            </div>
-                        </td>
-                        <td style="vertical-align: middle;">({{ field.datatype}})</td>
-                    </tr>
-                {% endfor %}
                 <tr>
-                    <th>&nbsp;</th>
-                    <td colspan="2">
-                        <button type="submit" class="btn btn-primary">Apply</button>
+                    <td colspan="1">
+                        <button type="button" id="addMoreFilters" onclick="create_filter()" class="btn btn-primary">Add More Filters</button>
+                    </td>
+                     <td colspan="2">
+                         <button type="submit" class="btn btn-success">Apply</button>
                     </td>
                 </tr>
             </tbody>
@@ -85,31 +73,155 @@
 
     {% include "django_rest_utils/functions.js" %}
 
-    function advanced_search() {
+
+    function advanced_search(){
         var uri = window.location.toString();
-        $('#advanced_filters input').each(function() {
-            var input = $(this);
-            if (input.val()) {
-                var value = input.prev().val() + ':' + encodeURIComponent(input.val());
-                uri = updateQueryStringParameter(input.attr('name'), value, uri);
+        // remove all current filters in the uri
+        fields_info.forEach(function(field){
+            uri = removeQueryStringParameter(field.name, uri);
+        });
+        // add to the uri any filters that exists in the rows of the table advanced_filters
+        $('#advanced_filters tr').each(function() {
+            var selected_field = $(this).find('.select-field');
+            var selected_operator =  $(this).find('.select-operator');
+            var input_ = $(this).find(".input-value");
+            if (selected_field.val() && input_.val()){
+                var value = selected_operator.val() + ':' + encodeURIComponent(input_.val());
+                uri = updateQueryStringParameter(selected_field.val(), value, uri);
             }
             else {
-                uri = removeQueryStringParameter(input.attr('name'), uri);
+                uri = removeQueryStringParameter(selected_field.val(), uri);
             }
         });
         window.location = uri;
     }
 
-    {% for filter in active_filters %}
-        var filter_value = "{{ filter.1 }}";
-        var colon_location = filter_value.indexOf(':');
-        var operator = 'eq';
-        if (colon_location != -1) {
-            operator = filter_value.slice(0, colon_location);
-            filter_value = filter_value.slice(colon_location + 1);
+    //GLOBAL ARRAYS TO BE USED IN THE FOLLOWING FUNCTIONS
+
+    var fields_info = [
+        {name: "", datatype: ""},
+        {% for field in fields %}
+            {name: "{{ field.name }}", datatype: "{{ field.datatype }}"},
+        {% endfor %}
+    ];
+
+    var operators_info = [
+        {% for operator in operators %}
+            {name: "{{operator}}"},
+        {% endfor %}
+    ];
+
+
+    var active_filters = [
+        {% for filter in active_filters %}
+            {name: "{{filter.0}}", value: "{{filter.1}}"},
+        {% endfor %}
+    ];
+
+    var type_mapping = {
+        string: "<input type='text' class='form-control input-value'></input>",
+        datetime: "<input type='text' class='form-control input-value'></input>",
+        integer: "<input type='number' class='form-control input-value'></input>",
+        double: "<input type='number' step=0.1 class='form-control input-value'></input>",
+        boolean: "<select class='form-control input-value'><option value='1'>true</option><option value='0'>false</option</select>"
+    }
+
+    window.addEventListener("load", function(event) {
+    // if there is active filter, create filter from each active filter
+        if (active_filters && active_filters.length){
+            active_filters.forEach( function (item)
+                {
+                create_filter(item);
+                }
+            );
         }
-        document.getElementById('filter_{{ filter.0 }}_op').value = operator;
-        document.getElementById('filter_{{ filter.0 }}_val').value = convertHTMLEntities(filter_value);
-    {% endfor %}
+        // if there is no active filter, create 3 new empty filters
+        else {
+             create_filter();
+             create_filter();
+             create_filter();
+             }
+
+        // ADD LISTENER TO ANY CHANGE IN THE TABLE IN SELECTOR OF FIELD
+        $('#fields_table').on('change', '.select-field', function(e){
+               var target_ = $(e.target);
+               var data_type = target_.find(':selected').attr('data-type');
+               var parent_tr = $(e.target).closest('tr');
+               parent_tr.find('.td-type').text('(' + data_type + ')');
+               var input_tag = parent_tr.find('input');
+               var new_input_tag = $(type_mapping[data_type]);
+               input_tag.replaceWith(new_input_tag);
+        });
+
+        $('#fields_table').on('click', '.remove-button', function(e){
+            $(e.target).closest('tr').remove();
+
+        });
+    });
+
+    function create_filter(filter_){
+        var tr_ = $('<tr/>');
+        var td_field = $('<td/>');
+        // create the select input of field
+        var select_field = $('<select/>').attr('class', 'form-control select-field').appendTo(td_field);
+
+        $(fields_info).each(function() {
+            select_field.append($('<option>').attr('value',this.name).text(this.name).attr('data-type', this.datatype));
+        });
+
+        td_field.appendTo(tr_);
+
+        var td_operator = $('<td/>');
+        // create the select input of operator
+        var div1 = $('<div/>').attr('class', 'form-inline');
+        var div2 = $('<div/>').attr('class', 'form-group');
+
+        var select_operator = $('<select/>').attr('class', 'form-control select-operator').appendTo(div2);
+
+        $(operators_info).each(function() {
+            select_operator.append($('<option>').attr('value',this.name).text(this.name));
+        });
+
+        var td_input = $('<td/>');
+
+        div2.appendTo(div1);
+        div1.appendTo(td_operator);
+        td_operator.appendTo(tr_);
+        td_input.appendTo(tr_);
+
+        var td_type = $('<td/>').attr('style', 'vertical-align: middle;').attr('class', 'td-type').text('(' + 'unknown' + ')');
+        td_type.appendTo(tr_);
+
+        // if there is a given filter, assign its details in the filter inputs
+        if (filter_ != undefined){
+            $(select_field).val(filter_.name);
+            // find the data type of the filter_ and insert it to the type column
+            data_type = $(select_field).find(':selected').attr('data-type')
+            td_type.text(data_type);
+            // create input tag according to the data type
+            var input_tag = $(type_mapping[data_type]);
+            input_tag.appendTo(td_input);
+
+            var operator = filter_.value.substr(0,filter_.value.indexOf(':'));
+            var value_ = filter_.value.substr(filter_.value.indexOf(':') + 1, filter_.value.length);
+            select_operator.val(operator);
+            input_tag.val(value_);
+         }
+         else{
+            // there is no active filter, make the input as readonly
+            var input_tag = $('<input/>').attr('class', 'form-control');
+            input_tag.attr('readonly', true).appendTo(td_input);
+         }
+
+        var td_remove = "<td style='vertical-align: middle;'><button type='button' class='btn-xs btn-danger  remove-button' title='remove this filter'>X</button></td>"
+
+        $(td_remove).appendTo(tr_);
+
+        $(tr_).appendTo('#fields_table');
+
+    }
+
+
+
 
 </script>
