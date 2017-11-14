@@ -2,13 +2,18 @@ from django.utils.safestring import mark_safe
 from django.template.loader import render_to_string
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse, StreamingHttpResponse, HttpResponseBadRequest
-from django.db.models.fields.related import RelatedField
+from rest_framework.relations import ManyRelatedField, RelatedField
+from rest_framework.serializers import BaseSerializer
 from rest_framework.exceptions import APIException
 import json
 from functools import partial
+from itertools import repeat, chain, imap, izip, islice
 from infi.django_rest_utils.pluck import pluck_result, collect_items_from_string_lists
-from .utils import to_csv_row
+from .utils import to_csv_row, composition, wrap_with_try_except
+from django.utils.encoding import escape_uri_path
+import logging
 
+logger = logging.getLogger(__name__)
 class ViewDescriptionMixin(object):
 
     def get_view_description(self, html=False):
@@ -85,45 +90,88 @@ class StreamingMixin(object):
     '''
 
     def list(self, request, *args, **kwargs):
-        if request.GET.get('format', '').lower() == 'csv':
-            response_generator = create_stream_csv_response_iterator(self.filter_queryset(self.get_queryset()),
-                                                                          request)
-            return StreamingHttpResponse(response_generator, content_type='text/csv')
-        elif request.GET.get('stream', '').lower() not in ('1', 'true'):
-            return super(StreamingMixin, self).list(request, *args, **kwargs)
+        is_csv = request.GET.get('format', '').lower() == 'csv'
+        is_stream = request.GET.get('stream', '').lower() in ('1', 'true') or is_csv
+        if is_stream:
+            return self._create_streamed_response(request, is_csv)
         else:
-            queryset = self.filter_queryset(self.get_queryset())
-            return StreamingHttpResponse(self._stream_json(request, queryset),
-                                         content_type='application/json')
+            return super(StreamingMixin, self).list(request, *args, **kwargs)
 
-    def _stream_json(self, request, queryset):
+    def _infer_field_list(self, request, serializer):
+        field_list_param = request.query_params.getlist('fields')
+        is_flat = request.GET.get('format', '').lower() in ('csv', 'flatjson')
+
+        if field_list_param:
+            return collect_items_from_string_lists(field_list_param)
+        elif is_flat:
+            field_list = []
+            for name, field in serializer.get_fields().items():
+                if isinstance(field, ManyRelatedField):
+                    continue
+                if isinstance(field, BaseSerializer):
+                    field_list.append(name + '.id')
+                    continue
+                field_list.append(name)
+            return field_list
+        else:
+            return None
+
+    def _infer_filename(self):
+        try:
+            return self.get_view_name().replace(' ', '').lower()
+        except:
+            return 'api_data'
+
+    def _infer_content_disposition(self, extension):
+        return 'attachment; filename="{filename}.{extension}"'.format(filename=self._infer_filename(),
+                                                                      extension=extension)
+
+    def _create_streamed_response(self, request, is_csv):
+        queryset = self.filter_queryset(self.get_queryset())
         serializer = self.get_serializer(queryset)
-        field_list = request.query_params.getlist('fields')
-        yield '{"error": null,\n"result": ['
-        first = True
-        for obj in queryset.iterator():
-            yield '\n' if first else ',\n'
-            yield json.dumps(pluck_result(serializer.to_representation(obj), field_list))
-            first = False
-        yield '\n], "metadata": {"ready": true}}'
+        field_list = self._infer_field_list(request, serializer)
+        if is_csv:
+            content_type='text/csv'
+            header = ','.join(field_list) + '\n'
+            footer = ''
+            delimiter = ''
+            dict_renderering_function = partial(to_csv_row, field_list)
+            extension = 'csv'
+        else:
+            content_type = 'application/json'
+            header = '{"error": null, "metadata": {"ready": true}, "result": [\n'
+            footer = '\n]}'
+            delimiter = ',\n'
+            dict_renderering_function = json.dumps
+            extension = 'json'
 
+        renderering_function = composition(
+            serializer.to_representation, # Model => dict
+            partial(pluck_result, field_list=field_list), # pluck fields from dict
+            dict_renderering_function # dict => str
+        )
+        safe_rendering_function = wrap_with_try_except(renderering_function,
+                                                       on_except= lambda e: json.dumps({'error': e.message}),
+                                                       logger=logger)
+        # map every model object to its string representation
+        rendered_queryset_iterator = imap(safe_rendering_function, queryset.iterator())
 
-def create_stream_csv_response_iterator(queryset, request):
-    model_meta = queryset.model._meta
-    field_list_param = request.query_params.getlist('fields')
-    if field_list_param:
-        return _stream_csv(queryset, collect_items_from_string_lists(field_list_param))
-    else:
-        field_list = [field.name for field in model_meta.get_fields()
-                      if field.concrete and not field.many_to_many]
-        return _stream_csv(queryset, field_list)
+        # Add a delimiter -before- every "row"
+        # The chain and zip pattern is common for combining two iterators in a round robin fasion
+        with_leading_delimiters = chain.from_iterable(izip(repeat(delimiter),
+                                                           rendered_queryset_iterator))
 
-
-def _stream_csv(queryset, field_list):
-    yield to_csv_row(field_list)
-    for obj in queryset.iterator():
-        value_list = [getattr(obj, f) for f in field_list]
-        yield to_csv_row(value_list)
+        # Add header and footer, and chain the iterators while ensuring the first
+        # member is taken without a leading delimiter
+        with_header_and_footer = chain(
+            repeat(header, 1), # header
+            islice(rendered_queryset_iterator, 1), # first "row", no trailing delimiter
+            with_leading_delimiters, # rest of the rows with a delimiter before each one
+            repeat(footer, 1) # footer
+        )
+        response = StreamingHttpResponse(with_header_and_footer, content_type=content_type)
+        response['Content-Disposition'] = self._infer_content_disposition(extension)
+        return response
 
 
 @login_required

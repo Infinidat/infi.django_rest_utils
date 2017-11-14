@@ -3,6 +3,7 @@ from infi.django_rest_utils.filters import OrderingField, FilterableField
 
 
 class DefaultModelSerializer(serializers.ModelSerializer):
+
     def get_filterable_fields(self):
         model = self.Meta.model
         return model.get_filterable_fields() if hasattr(model, 'get_filterable_fields') else FilterableField.for_model(model)

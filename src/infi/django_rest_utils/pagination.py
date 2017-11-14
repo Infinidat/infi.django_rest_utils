@@ -1,4 +1,5 @@
 from django.template.loader import render_to_string
+from django.conf import settings
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger, Page, InvalidPage
 from rest_framework import pagination
 from collections import OrderedDict
@@ -111,6 +112,7 @@ class InfinidatPaginationSerializer(pagination.PageNumberPagination):
     # Has to be set since django rest utils since commit 3806af3d15dcbf9c5e1e390d1ae3808f12191342 on django rest
     # framework: https://github.com/tomchristie/django-rest-framework/commit/3806af3d15dcbf9c5e1e390d1ae3808f12191342
     page_size_query_param = 'page_size'
+    max_page_size = settings.REST_FRAMEWORK.get('MAX_PAGINATE_BY')
 
     def get_paginator_description(self, view, html):
         if not html:
