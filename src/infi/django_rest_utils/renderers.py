@@ -16,6 +16,9 @@ def _pluck_response(response, renderer_context):
     '''
     try:
         request = renderer_context['request']
+        if 'fields' in request.query_params and not request.query_params.get('fields'):
+            renderer_context['response'].status_code = 400
+            return _build_response(metadata=dict(ready=True), result=None, error='fields is not allowed to be empty')
         return _build_response(metadata=response['metadata'],
                                result=pluck_result(response['result'], request.query_params.getlist('fields')))
     except Exception as e:
