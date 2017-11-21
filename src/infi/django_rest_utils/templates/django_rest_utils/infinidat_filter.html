@@ -3,7 +3,7 @@
     <button class="btn btn-default btn-sm" type="button" data-toggle="collapse" data-target="#filtering-collapse"><i class="glyphicon glyphicon-chevron-down"></i></button>
 </h3>
 
-<div class="collapse {% if active_filters %}in{% endif %}" id="filtering-collapse">
+< class="collapse {% if active_filters %}in{% endif %}" id="filtering-collapse">
 
     <p>
     The syntax for filtering objects by specific fields is:
@@ -20,16 +20,18 @@
         <table class="table" style="width: auto;" id="advanced_filters">
             <tbody id="fields_table">
 
-
             </tbody>
             <tbody>
                 <tr>
-                    <td colspan="1">
-                        <button type="button" id="addMoreFilters" onclick="create_filter()" class="btn btn-primary">Add More Filters</button>
-                    </td>
-                     <td colspan="2">
+                     <td colspan="3">
                          <button type="submit" class="btn btn-success">Apply</button>
                     </td>
+                    <td colspan="2">
+                        <div style="float: right;">
+                        <button  type="button" id="addMoreFilters" onclick="create_filter()" class="btn btn-primary">Add More Filters</button>
+                        </div>
+                    </td>
+
                 </tr>
             </tbody>
         </table>
@@ -189,7 +191,7 @@
         td_operator.appendTo(tr_);
         td_input.appendTo(tr_);
 
-        var td_type = $('<td/>').attr('style', 'vertical-align: middle;').attr('class', 'td-type').text('(' + 'unknown' + ')');
+        var td_type = $('<td/>').attr('style', 'vertical-align: middle;text-align: center;').attr('class', 'td-type').text('(' + 'unknown' + ')');
         td_type.appendTo(tr_);
 
         // if there is a given filter, assign its details in the filter inputs
@@ -204,6 +206,9 @@
 
             var operator = filter_.value.substr(0,filter_.value.indexOf(':'));
             var value_ = filter_.value.substr(filter_.value.indexOf(':') + 1, filter_.value.length);
+            if (operator == ''){
+                operator = 'eq'
+            }
             select_operator.val(operator);
             input_tag.val(value_);
          }
