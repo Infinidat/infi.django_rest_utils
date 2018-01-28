@@ -18,7 +18,10 @@ class APITokenAuthentication(authentication.BaseAuthentication):
             api_token = APIToken.objects.get(token=token)
         except APIToken.DoesNotExist:
             raise exceptions.AuthenticationFailed("Invalid API token '%s'" % token)
-        return (api_token.user, None)
+        if api_token.user.is_active:
+            # returns token only if the user is active
+            return (api_token.user, None)
+        return None
 
     def get_authenticator_description(self, view, html):
         token = APIToken.objects.for_user(view.request.user)
