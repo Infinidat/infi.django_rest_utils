@@ -123,10 +123,18 @@
     var type_mapping = {
         string: "<input type='text' class='form-control input-value'></input>",
         datetime: "<input type='text' class='form-control input-value'></input>",
-        integer: "<input type='number' class='form-control input-value'></input>",
-        double: "<input type='number' step=0.1 class='form-control input-value'></input>",
-        boolean: "<select class='form-control input-value'><option value='1'>true</option><option value='0'>false</option</select>"
+        integer: "<input type='text' class='form-control input-value'></input>",
+        double: "<input type='text' class='form-control input-value'></input>",
+        boolean: "<select class='form-control input-value'><option value='1'>true</option><option value='0'>false</option</select>",
+        float: "<input type='text' class='form-control input-value'></input>"
     }
+
+<!--list of integers: [0-9,]+-->
+<!--integer : [0-9]+-->
+<!--double: [0-9]+([.][0-9]+)-->
+<!--list of doubles: [0-9,.]+-->
+
+    var operator_allow_multiple = ['in','out','between'];
 
     window.addEventListener("load", function(event) {
     // if there is active filter, create filter from each active filter
@@ -144,22 +152,71 @@
              create_filter();
              }
 
-        // ADD LISTENER TO ANY CHANGE IN THE TABLE IN SELECTOR OF FIELD
+        // ADD LISTENER TO ANY CHANGE IN THE TABLE IN SELECTOR OF FIELD (IS DEPENDED ON THE CURRENT VALUE OF OPERATOR)
         $('#fields_table').on('change', '.select-field', function(e){
-               var target_ = $(e.target);
-               var data_type = target_.find(':selected').attr('data-type');
-               var parent_tr = $(e.target).closest('tr');
-               parent_tr.find('.td-type').text('(' + data_type + ')');
-               var input_tag = parent_tr.find('input');
-               var new_input_tag = $(type_mapping[data_type]);
-               input_tag.replaceWith(new_input_tag);
+           var target_ = $(e.target);
+           var data_type = target_.find(':selected').attr('data-type');
+           var parent_tr = $(e.target).closest('tr');
+           parent_tr.find('.td-type').text('(' + data_type + ')');
+           var input_tag = parent_tr.find('input');
+           var new_input_tag = $(type_mapping[data_type]);
+           //find the selected operator
+           operator_tag = parent_tr.find('.select-operator');
+           selected_operator = operator_tag.find(':selected').attr('data-type');
+           new_input_tag = build_input_field(data_type, selected_operator)
+           input_tag.replaceWith(new_input_tag);
         });
+
+        // ADD LISTENER TO ANY CHANGE IN OPERATOR (IS DEPENDED ON THE CURRENT VALUE OF FIELD)
+        $('#fields_table').on('change', '.select-operator', function(e){
+            var target_ = $(e.target);
+            var selected_operator = target_.find(':selected').attr('value');
+            var parent_tr = $(e.target).closest('tr');
+            var select_field_input= parent_tr.find('.select-field');
+            var data_type = select_field_input.find(':selected').attr('data-type');
+            new_input_tag = build_input_field(data_type, selected_operator);
+            var input_tag = parent_tr.find('input');
+            input_tag.replaceWith(new_input_tag);
+
+        });
+
 
         $('#fields_table').on('click', '.remove-button', function(e){
             $(e.target).closest('tr').remove();
 
         });
     });
+
+
+       function build_input_field(input_type, operator){
+            // a function to create an input tag according to the given type and operator
+            // adding a pattern attribute to support validation of numbers and ',' for multiple values
+            var new_input_tag = $(type_mapping[input_type]);
+            if (input_type == 'integer'){
+                // if its integer and multiple values is allowed-> add a pattern to allow a list of integers
+                if (operator_allow_multiple.includes(operator)){
+                    new_input_tag.attr('pattern', '[0-9,.]+');
+                }
+                // multiple values is not allowed-> add pattern to allow a single integer
+                else{
+                    new_input_tag.attr('pattern', '[0-9]+');
+                }
+
+            }
+            else if (['double', 'float'].includes(input_type)){
+               // if its integer and multiple values is allowed-> add a pattern to allow a single float
+                if (operator_allow_multiple.includes(operator)){
+                    new_input_tag.attr('pattern', '[0-9,.]+');
+                }
+               // multiple values is not allowed-> add a pattern to allow a list of floats
+                else{
+                    new_input_tag.attr('pattern', '[0-9]+([.][0-9]+)');
+                }
+            }
+            return new_input_tag;
+        };
+
+
 
     function create_filter(filter_){
         var tr_ = $('<tr/>');
@@ -200,15 +257,15 @@
             // find the data type of the filter_ and insert it to the type column
             data_type = $(select_field).find(':selected').attr('data-type')
             td_type.text(data_type);
-            // create input tag according to the data type
-            var input_tag = $(type_mapping[data_type]);
-            input_tag.appendTo(td_input);
-
             var operator = filter_.value.substr(0,filter_.value.indexOf(':'));
             var value_ = filter_.value.substr(filter_.value.indexOf(':') + 1, filter_.value.length);
             if (operator == ''){
                 operator = 'eq'
             }
+            // create input tag according to the data type and the operator
+            input_tag = build_input_field(data_type, operator)
+            input_tag.appendTo(td_input);
+
             select_operator.val(operator);
             input_tag.val(value_);
          }
@@ -225,8 +282,5 @@
         $(tr_).appendTo('#fields_table');
 
     }
-
-
-
 
 </script>

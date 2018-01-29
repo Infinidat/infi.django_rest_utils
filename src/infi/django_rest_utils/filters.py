@@ -232,9 +232,9 @@ class InfinidatFilter(filters.BaseFilterBackend):
         ]
 
     def _apply_filter(self, queryset, field, expr):
-        q = self._build_q(field, expr)
+        q, negate = self._build_q(field, expr)
         try:
-            return queryset.filter(q).distinct()
+            return queryset.exclude(q).distinct() if negate else queryset.filter(q).distinct()
         except (ValueError, DjangoValidationError):
             raise ValidationError(field.name + ': the given operator or value are inappropriate for this field')
 
@@ -267,7 +267,7 @@ class InfinidatFilter(filters.BaseFilterBackend):
                                           field.name, operator.name, operator.get_expected_value_description()))
             q = field.build_q(operator.orm_operator, value)
 
-        return ~q if operator.negate else q
+        return (q, operator.negate)
 
 
 class SimpleFilter(object):
