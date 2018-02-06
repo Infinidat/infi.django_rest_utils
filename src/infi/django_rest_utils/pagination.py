@@ -29,6 +29,7 @@ class LargeQuerySetPaginator(Paginator):
         super(LargeQuerySetPaginator, self).__init__(*args, **kwargs)
         self.approximated_number_of_objects = False
         self.limited_number_of_objects = False
+        self._count = None
 
 
     def _get_limited_count(self):
