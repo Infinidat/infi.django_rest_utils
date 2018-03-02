@@ -151,7 +151,7 @@
            operator_tag = parent_tr.find('.select-operator');
            selected_operator = operator_tag.find(':selected').attr('value');
 
-           new_input_tag = build_input_field(data_type, selected_operator)
+           new_input_tag = build_input_field(data_type, selected_operator);
            input_tag.replaceWith(new_input_tag);
 
         });
@@ -168,8 +168,10 @@
             input_pattern = build_input_pattern(data_type, selected_operator);
             pattern= input_pattern[0];
             title = input_pattern[1];
-            var input_tag = parent_tr.find('input');
-            input_tag.attr('pattern', pattern).attr('title', title);
+            if (pattern != ''){
+                var input_tag = parent_tr.find('input');
+                input_tag.attr('pattern', pattern).attr('title', title);
+            }
         });
 
         $('#fields_table').on('click', '.remove-button', function(e){
