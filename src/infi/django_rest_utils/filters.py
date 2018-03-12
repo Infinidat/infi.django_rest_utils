@@ -409,5 +409,5 @@ class OrderingFilter(filters.OrderingFilter):
         ordering = self.get_ordering(request, queryset, view) or []
         pk_field = queryset.model._meta.pk.name
         if not any(field in ordering for field in (pk_field, '-' + pk_field, 'pk', '-pk')):
-            ordering.append(pk_field)
+            ordering = ordering + [pk_field] if isinstance(ordering, list) else ordering + (pk_field,)
         return queryset.extra(order_by=ordering)
