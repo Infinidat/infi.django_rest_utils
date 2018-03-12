@@ -15,7 +15,7 @@ class APITokenManager(models.Manager):
 
 class APIToken(models.Model):
 
-    user = models.ForeignKey(settings.AUTH_USER_MODEL)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     token = models.CharField(max_length=64)
 
     objects = APITokenManager()
