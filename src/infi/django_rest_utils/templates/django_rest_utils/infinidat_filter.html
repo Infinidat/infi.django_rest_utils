@@ -75,7 +75,6 @@
 
     {% include "django_rest_utils/functions.js" %}
 
-
     function advanced_search(){
         var uri = window.location.toString();
         // remove all current filters in the uri
@@ -120,16 +119,11 @@
         {% endfor %}
     ];
 
-    var type_mapping = {
-        string: "<input type='text' class='form-control input-value'></input>",
-        datetime: "<input type='text' class='form-control input-value'></input>",
-        integer: "<input type='number' class='form-control input-value'></input>",
-        double: "<input type='number' step=0.1 class='form-control input-value'></input>",
-        boolean: "<select class='form-control input-value'><option value='1'>true</option><option value='0'>false</option</select>"
-    }
+
+    var operator_allow_multiple = ['in','out'];
 
     window.addEventListener("load", function(event) {
-    // if there is active filter, create filter from each active filter
+        // if there is active filter, create filter from each active filter
         if (active_filters && active_filters.length){
             active_filters.forEach( function (item)
                 {
@@ -145,14 +139,39 @@
              }
 
         // ADD LISTENER TO ANY CHANGE IN THE TABLE IN SELECTOR OF FIELD
+        // BUILDING A NEW INPUT TAG ACCORDING TO THE CURRENT FIELD AND SELECTED OPERATOR
         $('#fields_table').on('change', '.select-field', function(e){
-               var target_ = $(e.target);
-               var data_type = target_.find(':selected').attr('data-type');
-               var parent_tr = $(e.target).closest('tr');
-               parent_tr.find('.td-type').text('(' + data_type + ')');
-               var input_tag = parent_tr.find('input');
-               var new_input_tag = $(type_mapping[data_type]);
-               input_tag.replaceWith(new_input_tag);
+           var target_ = $(e.target);
+           var data_type = target_.find(':selected').attr('data-type');
+           var parent_tr = $(e.target).closest('tr');
+           parent_tr.find('.td-type').text('(' + data_type + ')');
+           var input_tag = parent_tr.find('input');
+
+           //find the selected operator
+           operator_tag = parent_tr.find('.select-operator');
+           selected_operator = operator_tag.find(':selected').attr('value');
+
+           new_input_tag = build_input_field(data_type, selected_operator);
+           input_tag.replaceWith(new_input_tag);
+
+        });
+
+        // ADD LISTENER TO ANY CHANGE IN OPERATOR
+        // CHANGE THE INPUT PATTERN ACCORDING TO THE CURRENT OPERATOR AND SELECTED FIELD
+        $('#fields_table').on('change', '.select-operator', function(e){
+            var target_ = $(e.target);
+            var selected_operator = target_.find(':selected').attr('value');
+            var parent_tr = $(e.target).closest('tr');
+            var select_field_input= parent_tr.find('.select-field');
+            var data_type = select_field_input.find(':selected').attr('data-type');
+
+            input_pattern = build_input_pattern(data_type, selected_operator);
+            pattern= input_pattern[0];
+            title = input_pattern[1];
+            if (pattern != ''){
+                var input_tag = parent_tr.find('input');
+                input_tag.attr('pattern', pattern).attr('title', title);
+            }
         });
 
         $('#fields_table').on('click', '.remove-button', function(e){
@@ -160,6 +179,69 @@
 
         });
     });
+
+
+   function build_input_pattern(input_type, operator){
+   //helper function to build the pattern attribute of the input field
+        var pattern = ''
+        var title = ''
+        if (input_type == 'integer'){
+            // if its integer and multiple values is allowed-> add a pattern to allow a list of integers
+            if (operator_allow_multiple.includes(operator)){
+                pattern =  '^\\[\\d+(,\\d+)*\\]|\\d+(,\\d+)*|\\(\\d+(,\\d+)*\\)$' //list: [0-9]+(,[0-9]+)*, between: '([0-9]+)*(,[0-9]+)'
+                title = 'Integer list can contain only numbers seperated by a comma. It can be enclosed by () or []'
+            }
+            else if(operator == 'between'){
+            // if is integer and operator between-> add a pattern to allow a comma separated pair of integers
+                pattern = '(\\d+)*(,\\d+)'
+                title = 'Operator Between can contain only two values separated by a comma'
+            }
+            // multiple values is not allowed-> add pattern to allow a single integer only
+            else{
+                pattern = '^\\d+$';
+                title = 'Integer field can contain only numbers'
+            }
+        }
+        else if (['double', 'float'].includes(input_type)){
+           // if its double/float and multiple values is allowed-> add a pattern to allow a list of decimals
+            if (operator_allow_multiple.includes(operator)){
+                pattern = '^\\d+([.]\\d+)(,\\d+([.]\\d+))*|\\[\\d+([.]\\d+)(,\\d+([.]\\d+))*\\]|\\(\\d+([.]\\d+)(,\\d+([.]\\d+))*\\)$';
+                title = 'A list of Decimal numbers can contain only decimal numbers seperated by a comma. It can be enclosed by () or []'
+            }
+            else if(operator == 'between') {
+            // if is double/float and operator between-> add a pattern to allow a comma separated pair of decimals
+                pattern = '^(\\d+([.]\\d+))*(,\\d+([.]\\d+))$'
+                title = 'Operator Between can contain only two decimal values seperated by a comma'
+            }
+           // multiple values is not allowed-> add a pattern to allow a single float only
+            else{
+               pattern = '^\\d+([.]\\d+)$';
+               title = 'A decimal number must contain a decimal point and number. i.e 1.0, 1.5'
+            }
+        }
+        return [pattern, title];
+   };
+
+
+   function build_input_field(input_type, operator){
+       if (input_type == 'boolean') {
+            var input_field  = $("<select class='form-control input-value'><option value='1'>true</option><option value='0'>false</option</select>");
+       }
+       else {
+            // if the input_type is not boolean, its type will be text and the content will be validated according to the
+            // calculated pattern
+           var input_field  = $("<input type='text' class='form-control input-value'></input>");
+           // find out what should be the pattern and the title of the input field
+           input_pattern = build_input_pattern(input_type, operator);
+           pattern= input_pattern[0];
+           title = input_pattern[1];
+           if (pattern != ''){
+                input_field.attr('pattern', pattern).attr('title', title);
+           }
+        };
+       return input_field;
+   };
+
 
     function create_filter(filter_){
         var tr_ = $('<tr/>');
@@ -200,21 +282,21 @@
             // find the data type of the filter_ and insert it to the type column
             data_type = $(select_field).find(':selected').attr('data-type')
             td_type.text(data_type);
-            // create input tag according to the data type
-            var input_tag = $(type_mapping[data_type]);
-            input_tag.appendTo(td_input);
-
             var operator = filter_.value.substr(0,filter_.value.indexOf(':'));
             var value_ = filter_.value.substr(filter_.value.indexOf(':') + 1, filter_.value.length);
             if (operator == ''){
                 operator = 'eq'
             }
+            // create input tag according to the data type and the operator
+            input_tag = build_input_field(data_type, operator)
+            input_tag.appendTo(td_input);
+
             select_operator.val(operator);
             input_tag.val(value_);
          }
          else{
             // there is no active filter, make the input as readonly
-            var input_tag = $('<input/>').attr('class', 'form-control');
+            var input_tag = $('<input/>').attr('class', 'form-control input-value').attr('type', 'text');
             input_tag.attr('readonly', true).appendTo(td_input);
          }
 
@@ -225,8 +307,6 @@
         $(tr_).appendTo('#fields_table');
 
     }
-
-
 
 
 </script>

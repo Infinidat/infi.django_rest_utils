@@ -29,7 +29,7 @@ class SimpleMetadata(metadata.SimpleMetadata):
                 if approx_number_of_objects:
                     return approx_number_of_objects < settings.MAX_CHOICES_TO_DETAIL_IN_API_META
                 else:
-                    return queryset.count() < settings.MAX_CHOICES_TO_DETAIL_IN_API_META
+                    return field.queryset.count() < settings.MAX_CHOICES_TO_DETAIL_IN_API_META
         return hasattr(field, 'choices')
 
     def get_field_info(self, field):
