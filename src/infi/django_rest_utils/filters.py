@@ -361,14 +361,20 @@ class OrderingFilter(filters.OrderingFilter):
         ordering_fields = self.get_ordering_fields(view)
         if not ordering_fields:
             return None
+        # take the ordering params from request and send it to the template in order to populate the sorting inputs - #sptl 567
+        ordering = None
+        params = view.request.query_params.get(self.ordering_param)
+        if params:
+            ordering = [str(param.strip()) for param in params.split(',')]
         context = dict(
             ordering_param=self.ordering_param,
             default_ordering=self.get_default_ordering(view),
             fields=ordering_fields,
-            ordering=self.get_ordering(view.request, view.queryset, view),
+            ordering=ordering,
             url=view.request.build_absolute_uri(view.request.path)
         )
         return render_to_string('django_rest_utils/ordering_filter.html', context)
+
 
     def get_ordering_fields(self, view):
         '''
