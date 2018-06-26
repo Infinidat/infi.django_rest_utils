@@ -9,6 +9,7 @@ Options:
 """
 
 from __future__ import absolute_import
+from __future__ import print_function
 from logging import getLogger
 from sys import argv
 logger = getLogger(__name__)
@@ -32,4 +33,4 @@ def pluck(json_filename, paths):
         for path in paths:
             results = traverse(path, raw)
             for result in results:
-                print '{}\t{}'.format(*result)
+                print('{}\t{}'.format(*result))
