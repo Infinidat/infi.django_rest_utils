@@ -58,7 +58,7 @@ class DefaultRouter(routers.DefaultRouter):
             def get(self, request, *args, **kwargs):
                 ret = OrderedDict()
                 namespace = request.resolver_match.namespace
-                for key, url_name in api_root_dict.items():
+                for key, url_name in list(api_root_dict.items()):
                     if namespace:
                         url_name = namespace + ':' + url_name
                     try:
