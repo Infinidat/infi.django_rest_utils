@@ -21,7 +21,7 @@ class APIToken(models.Model):
 
     objects = APITokenManager()
 
-    class Meta(object):
+    class Meta:
         verbose_name = 'API token'
 
     def __unicode__(self):

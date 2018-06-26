@@ -110,7 +110,7 @@ class StreamingMixin(object):
             return collect_items_from_string_lists(field_list_param)
         elif is_flat:
             field_list = []
-            for name, field in list(serializer.get_fields().items()):
+            for name, field in serializer.get_fields().items():
                 if isinstance(field, ManyRelatedField):
                     continue
                 if isinstance(field, BaseSerializer):
