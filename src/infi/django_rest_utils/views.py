@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 from django.utils.safestring import mark_safe
 from django.template.loader import render_to_string
 from django.contrib.auth.decorators import login_required
@@ -71,7 +72,7 @@ class QueryTimeLimitMixin(object):
             try:
                 cursor.execute('SET statement_timeout = %s', [self.time_limit])
                 return super(QueryTimeLimitMixin, self).list(request, *args, **kwargs)
-            except OperationalError, e:
+            except OperationalError as e:
                 if 'statement timeout' in e.message:
                     raise ValidationError(self.timeout_message)
                 raise
@@ -179,6 +180,6 @@ def user_token_view(request):
     """
     Returns an API token for the logged-in user.
     """
-    from models import APIToken
+    from .models import APIToken
     token = APIToken.objects.for_user(request.user)
     return HttpResponse(str(token), content_type='text/plain')
