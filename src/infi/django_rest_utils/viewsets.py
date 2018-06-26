@@ -1,3 +1,4 @@
+from builtins import object
 from rest_framework import viewsets
 from functools import partial
 

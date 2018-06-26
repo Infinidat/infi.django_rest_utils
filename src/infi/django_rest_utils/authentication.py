@@ -1,8 +1,10 @@
+from __future__ import absolute_import
+from builtins import str
 from django.template.loader import render_to_string
 from rest_framework import authentication
 from rest_framework import exceptions
 
-from models import APIToken
+from .models import APIToken
 
 
 class APITokenAuthentication(authentication.BaseAuthentication):

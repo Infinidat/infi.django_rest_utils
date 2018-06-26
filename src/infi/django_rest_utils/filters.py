@@ -1,3 +1,6 @@
+from builtins import str
+from past.builtins import basestring
+from builtins import object
 from django.conf import settings
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.template.loader import render_to_string
