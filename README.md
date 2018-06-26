@@ -2,6 +2,7 @@ Overview
 ========
 This project adds utility classes which enhance the django-rest-framework project (http://www.django-rest-framework.org/).
 
+This project was tested under Python 2.7 and 3.5.
 
 Usage
 =====
@@ -244,3 +245,9 @@ After cloning the repository, run the following commands:
     projector devenv build --use-isolated-python
 
 Run `projector` to see list of available commands.
+
+
+Running Tests
+-------------
+    bin/nosetests
+    
