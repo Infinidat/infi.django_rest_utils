@@ -1,3 +1,4 @@
+from builtins import object
 from django.db import models
 from django.conf import settings
 from django.contrib.auth.models import User
@@ -20,7 +21,7 @@ class APIToken(models.Model):
 
     objects = APITokenManager()
 
-    class Meta:
+    class Meta(object):
         verbose_name = 'API token'
 
     def __unicode__(self):

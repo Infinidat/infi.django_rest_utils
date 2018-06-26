@@ -1,3 +1,4 @@
+from builtins import object
 from rest_framework import viewsets
 from functools import partial
 
@@ -17,7 +18,7 @@ class FilteredSerializerMixin(object):
         field_names = set()
         for item in request.query_params.getlist('fields'):
             field_names.update(item.split(','))
-        for field_name in serializer.fields.keys():
+        for field_name in list(serializer.fields.keys()):
             if field_name not in field_names:
                 serializer.fields.pop(field_name)
         return

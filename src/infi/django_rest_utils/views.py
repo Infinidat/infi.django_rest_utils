@@ -1,4 +1,8 @@
 from __future__ import absolute_import
+from builtins import map
+from builtins import str
+from builtins import zip
+from builtins import object
 from django.utils.safestring import mark_safe
 from django.template.loader import render_to_string
 from django.contrib.auth.decorators import login_required
@@ -8,7 +12,7 @@ from rest_framework.serializers import BaseSerializer
 from rest_framework.exceptions import APIException
 import json
 from functools import partial
-from itertools import repeat, chain, imap, izip, islice
+from itertools import repeat, chain, islice
 from infi.django_rest_utils.pluck import pluck_result, collect_items_from_string_lists
 from .utils import to_csv_row, composition, wrap_with_try_except
 from django.utils.encoding import escape_uri_path
@@ -106,7 +110,7 @@ class StreamingMixin(object):
             return collect_items_from_string_lists(field_list_param)
         elif is_flat:
             field_list = []
-            for name, field in serializer.get_fields().items():
+            for name, field in list(serializer.get_fields().items()):
                 if isinstance(field, ManyRelatedField):
                     continue
                 if isinstance(field, BaseSerializer):
@@ -155,11 +159,11 @@ class StreamingMixin(object):
                                                        on_except= lambda e: json.dumps({'error': e.message}),
                                                        logger=logger)
         # map every model object to its string representation
-        rendered_queryset_iterator = imap(safe_rendering_function, queryset.iterator())
+        rendered_queryset_iterator = map(safe_rendering_function, queryset.iterator())
 
         # Add a delimiter -before- every "row"
         # The chain and zip pattern is common for combining two iterators in a round robin fasion
-        with_leading_delimiters = chain.from_iterable(izip(repeat(delimiter),
+        with_leading_delimiters = chain.from_iterable(zip(repeat(delimiter),
                                                            rendered_queryset_iterator))
 
         # Add header and footer, and chain the iterators while ensuring the first

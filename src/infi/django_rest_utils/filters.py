@@ -1,3 +1,6 @@
+from builtins import str
+from past.builtins import basestring
+from builtins import object
 from django.conf import settings
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.template.loader import render_to_string
@@ -124,7 +127,7 @@ def _get_filterable_fields(view):
     # Autodetect filterable fields
     return [
         FilterableField(field.source or field_name, datatype=_get_field_type(field))
-        for field_name, field in serializer.fields.items()
+        for field_name, field in list(serializer.fields.items())
         if not getattr(field, 'write_only', False) and not field.source == '*'
     ]
 
@@ -197,7 +200,7 @@ class InfinidatFilter(filters.BaseFilterBackend):
     def filter_queryset(self, request, queryset, view):
         filterable_fields = _get_filterable_fields(view)
         ignored_fields = self._get_ignored_fields(view)
-        for field_name in request.GET.keys():
+        for field_name in list(request.GET.keys()):
             if field_name in ignored_fields:
                 continue
             field = None
@@ -390,7 +393,7 @@ class OrderingFilter(filters.OrderingFilter):
                 # Autodetect fields
                 sortable_fields = [
                     OrderingField(field.source or field_name)
-                    for field_name, field in serializer.fields.items()
+                    for field_name, field in list(serializer.fields.items())
                     if not getattr(field, 'write_only', False) and not field.source == '*'
                 ]
         else:
