@@ -19,7 +19,8 @@ function removeQueryStringParameter(key, uri) {
     if (queryString !== "") {
         params_arr = queryString.split("&");
         for (var i = params_arr.length - 1; i >= 0; i -= 1) {
-            param = params_arr[i].split("=")[0];
+            // decode the param in order to overcome any spaces or differences between the key and the uri param
+            param = decodeURIComponent(params_arr[i].split("=")[0]);
             if (param === key) {
                 params_arr.splice(i, 1);
             }
