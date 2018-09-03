@@ -145,7 +145,7 @@
            var data_type = target_.find(':selected').attr('data-type');
            var parent_tr = $(e.target).closest('tr');
            parent_tr.find('.td-type').text('(' + data_type + ')');
-           var input_tag = parent_tr.find('input');
+           var input_tag = parent_tr.find('.input-value');
 
            //find the selected operator
            operator_tag = parent_tr.find('.select-operator');
