@@ -191,7 +191,7 @@ class InfinidatFilter(filters.BaseFilterBackend):
         active_filters = [(f.name, view.request.GET[f.name]) for f in filterable_fields if f.name in view.request.GET]
         context = dict(
             fields=filterable_fields,
-            operators=operators,
+            operators=operators.values(),
             active_filters=active_filters,
             url=view.request.build_absolute_uri(view.request.path)
         )
@@ -219,20 +219,21 @@ class InfinidatFilter(filters.BaseFilterBackend):
         return getattr(view, 'non_filtering_fields', DEFAULT_IGNORE)
 
     def _get_operators(self):
-        return [
-            Operator('eq',      'exact',     'field = value'),
-            Operator('ne',      'exact',     'field <> value', negate=True),
-            Operator('lt',      'lt',        'field < value'),
-            Operator('le',      'lte',       'field <= value'),
-            Operator('gt',      'gt',        'field > value'),
-            Operator('ge',      'gte',       'field >= value'),
-            Operator('like',    'icontains', 'field contains a string (case insensitive)'),
-            Operator('unlike',  'icontains', 'field does not contain a string (case insensitive)', negate=True),
-            Operator('in',      'in',        'field is equal to one of the given values', max_vals=1000),
-            Operator('out',     'in',        'field is not equal to any of the given values', negate=True, max_vals=1000),
-            Operator('between', 'range',     'field is in a range of two values (inclusive)', min_vals=2, max_vals=2),
-            Operator('isnull',  'isnull',    'field is null', boolean=True),
-        ]
+        return {
+            'eq': Operator('eq',      'exact',     'field = value'),
+            'ne': Operator('ne',      'exact',     'field <> value', negate=True),
+            'lt': Operator('lt',      'lt',        'field < value'),
+            'le': Operator('le',      'lte',       'field <= value'),
+            'gt': Operator('gt',      'gt',        'field > value'),
+            'ge': Operator('ge',      'gte',       'field >= value'),
+            'like': Operator('like',    'icontains', 'field contains a string (case insensitive)'),
+            'unlike': Operator('unlike',  'icontains', 'field does not contain a string (case insensitive)', negate=True),
+            'in': Operator('in',      'in',        'field is equal to one of the given values', max_vals=1000),
+            'out': Operator('out',     'in',        'field is not equal to any of the given values', negate=True, max_vals=1000),
+            'between': Operator('between', 'range',     'field is in a range of two values (inclusive)', min_vals=2, max_vals=2),
+            'isnull': Operator('isnull',  'isnull',    'field is null', boolean=True, max_vals=0),
+            'isnotnull': Operator('isnotnull', 'isnull', 'field is not null', boolean=True, negate=True, max_vals=0),
+        }
 
     def _apply_filter(self, queryset, field, expr):
         q, negate = self._build_q(field, expr)
@@ -244,12 +245,17 @@ class InfinidatFilter(filters.BaseFilterBackend):
     def _build_q(self, field, expr):
         # Get operator and value
         operators = self._get_operators()
-        if ':' in expr:
+        if expr in ['isnull', 'isnotnull']:
+            operator = operators[expr]
+            value = 1
+        elif ':' in expr:
             opname, value = expr.split(':', 1)
             try:
-                [operator] = [operator for operator in operators if operator.name == opname]
-            except ValueError:
+                # [operator] = [operator for operator in operators if operator.name == opname]
+                operator = operators[opname]
+            except KeyError:
                 raise ValidationError('{}: unknown operator "{}"'.format(field.name, opname))
+
         else:
             operator = operators[0] # First operator is the default one
             value = expr
