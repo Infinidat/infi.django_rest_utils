@@ -2,7 +2,10 @@
 
 from rest_framework import routers
 from collections import OrderedDict
-from django.core.urlresolvers import NoReverseMatch
+try:
+    from django.core.urlresolvers import NoReverseMatch
+except:
+    from django.urls import NoReverseMatch
 from rest_framework import views
 from rest_framework.response import Response
 from rest_framework.reverse import reverse

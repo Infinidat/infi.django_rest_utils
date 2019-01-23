@@ -9,7 +9,7 @@ def ajax_login_required(function):
     """
     @wraps(function, assigned=available_attrs(function))
     def wrapped_function(request, *args, **kwargs):
-        if request.user.is_authenticated():
+        if request.user.is_authenticated:
             return function(request, *args, **kwargs)
         else:
             return HttpResponseForbidden()
