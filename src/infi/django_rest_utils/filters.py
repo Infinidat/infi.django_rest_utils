@@ -50,6 +50,9 @@ class FilterableField(object):
     def __unicode__(self):
         return self.name
 
+    def __str__(self):
+        return self.name
+
     def __repr__(self):
         return '<FilterableField name=%s source=%s datatype=%s>' % (self.name, self.source, self.datatype)
 
@@ -104,6 +107,9 @@ class Operator(object):
         self.boolean = boolean
 
     def __unicode__(self):
+        return self.name
+
+    def __str__(self):
         return self.name
 
     def get_expected_value_description(self):

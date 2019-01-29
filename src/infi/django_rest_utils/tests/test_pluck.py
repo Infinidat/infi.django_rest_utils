@@ -1,5 +1,5 @@
 import unittest
-from infi.django_rest_utils.pluck import *
+from infi.django_rest_utils.pluck import collect_items_from_string_lists, pluck_result, traverse
 
 
 class PluckTest(unittest.TestCase):

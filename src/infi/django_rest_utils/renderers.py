@@ -64,7 +64,7 @@ class InfinidatJSONRenderer(JSONRenderer):
         current_plucking = view.request.GET.get("fields", "")
         context = dict(
             renderer=self,
-            fields=view.get_serializer().fields.keys(),
+            fields=list(view.get_serializer().fields.keys()),
             current_plucking=current_plucking.split(",") if current_plucking else [],
             url=view.request.build_absolute_uri(view.request.path)
         )

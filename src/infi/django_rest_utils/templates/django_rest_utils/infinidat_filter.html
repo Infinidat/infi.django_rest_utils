@@ -81,6 +81,8 @@
         fields_info.forEach(function(field){
             uri = removeQueryStringParameter(field.name, uri);
         });
+        // remove the page param from the url
+        uri = removeQueryStringParameter('page', uri);
         // add to the uri any filters that exists in the rows of the table advanced_filters
         $('#advanced_filters tr').each(function() {
             var selected_field = $(this).find('.select-field');
