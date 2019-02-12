@@ -92,7 +92,7 @@
                 var value = selected_operator.val() + ':' + encodeURIComponent(input_.val());
                 uri = updateQueryStringParameter(selected_field.val(), value, uri);
             }
-            else if (selected_field.val() && (selected_operator.val() === 'isnull' || selected_operator.val() === 'isnotnull' )){
+            else if (selected_field.val() && (selected_operator.val() === 'is null' || selected_operator.val() === 'is not null' )){
                 var value = selected_operator.val()
                 uri = updateQueryStringParameter(selected_field.val(), value, uri);
             }
@@ -173,7 +173,7 @@
 
             var input_tag = parent_tr.find('input');
 
-            if (selected_operator === 'isnull' || selected_operator === 'isnotnull' ){
+            if (selected_operator === 'is null' || selected_operator === 'is not null'){
                 input_tag.hide();
             } else {
                 input_tag.show();

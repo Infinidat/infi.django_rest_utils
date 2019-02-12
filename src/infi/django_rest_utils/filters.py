@@ -231,8 +231,8 @@ class InfinidatFilter(filters.BaseFilterBackend):
             'in': Operator('in',      'in',        'field is equal to one of the given values', max_vals=1000),
             'out': Operator('out',     'in',        'field is not equal to any of the given values', negate=True, max_vals=1000),
             'between': Operator('between', 'range',     'field is in a range of two values (inclusive)', min_vals=2, max_vals=2),
-            'isnull': Operator('isnull',  'isnull',    'field is null', boolean=True, max_vals=0),
-            'isnotnull': Operator('isnotnull', 'isnull', 'field is not null', boolean=True, negate=True, max_vals=0),
+            'is null': Operator('is null',  'isnull',    'field is null', boolean=True, max_vals=0),
+            'is not null': Operator('is not null', 'isnull', 'field is not null', boolean=True, negate=True, max_vals=0),
         }
 
     def _apply_filter(self, queryset, field, expr):
@@ -244,8 +244,12 @@ class InfinidatFilter(filters.BaseFilterBackend):
 
     def _build_q(self, field, expr):
         # Get operator and value
+
+        # support backward compatibility, when "is null" was "isnull"
+        expr = expr.replace('isnull', 'is null')
         operators = self._get_operators()
-        if expr in ['isnull', 'isnotnull']:
+
+        if expr in ['is null', 'is not null']:
             operator = operators[expr]
             value = 1
         elif ':' in expr:
