@@ -92,8 +92,8 @@
                 var value = selected_operator.val() + ':' + encodeURIComponent(input_.val());
                 uri = updateQueryStringParameter(selected_field.val(), value, uri);
             }
-            else if (selected_field.val() && (selected_operator.val() === 'is null' || selected_operator.val() === 'is not null' )){
-                var value = selected_operator.val()
+            else if (selected_field.val() && (selected_operator.val() === 'isnull' || selected_operator.val() === 'isnotnull' )){
+                var value = selected_operator.val() + ':' + '1';
                 uri = updateQueryStringParameter(selected_field.val(), value, uri);
             }
             else {
@@ -114,7 +114,7 @@
 
     var operators_info = [
         {% for operator in operators %}
-            {name: "{{operator}}"},
+            {name: "{{operator.name}}", title: "{{operator.title}}"},
         {% endfor %}
     ];
 
@@ -149,17 +149,29 @@
         $('#fields_table').on('change', '.select-field', function(e){
            var target_ = $(e.target);
            var data_type = target_.find(':selected').attr('data-type');
+           if (!data_type){
+                data_type = 'unknown';
+           }
            var parent_tr = $(e.target).closest('tr');
            parent_tr.find('.td-type').text('(' + data_type + ')');
            var input_tag = parent_tr.find('.input-value');
-
-           //find the selected operator
            operator_tag = parent_tr.find('.select-operator');
-           selected_operator = operator_tag.find(':selected').attr('value');
+           if (target_.val()){
+               selected_operator = operator_tag.find(':selected').attr('value');
 
-           new_input_tag = build_input_field(data_type, selected_operator);
-           input_tag.replaceWith(new_input_tag);
+               var new_input_tag = build_input_field(data_type, selected_operator);
 
+               if (selected_operator === 'isnull' || selected_operator === 'isnotnull'){
+                    new_input_tag.hide();
+               }
+           }
+           else{
+                var new_input_tag = $('<input/>').attr('class', 'form-control input-value test').attr('type', 'text');
+                new_input_tag.attr('readonly', true);
+                operator_tag.val('eq');
+           }
+
+            input_tag.replaceWith(new_input_tag);
         });
 
         // ADD LISTENER TO ANY CHANGE IN OPERATOR
@@ -173,7 +185,7 @@
 
             var input_tag = parent_tr.find('input');
 
-            if (selected_operator === 'is null' || selected_operator === 'is not null'){
+            if (selected_operator === 'isnull' || selected_operator === 'isnotnull'){
                 input_tag.hide();
             } else {
                 input_tag.show();
@@ -275,7 +287,7 @@
         var select_operator = $('<select/>').attr('class', 'form-control select-operator').appendTo(div2);
 
         $(operators_info).each(function() {
-            select_operator.append($('<option>').attr('value',this.name).text(this.name));
+            select_operator.append($('<option>').attr('value',this.name).text(this.title));
         });
 
         var td_input = $('<td/>');
@@ -303,18 +315,16 @@
             input_tag = build_input_field(data_type, operator)
             input_tag.appendTo(td_input);
 
-
-            if (filter_.value.indexOf(':') > -1) {
+            if (operator == 'isnull' || operator == 'isnotnull') {
+                input_tag.hide();
+            }
+            else if (filter_.value.indexOf(':') > -1) {
                 if (operator == ''){
                     operator = 'eq'
                 }
-                select_operator.val(operator);
                 input_tag.val(value_);
-            } else {
-                input_tag.hide();
-                var operator = filter_.value;
-                select_operator.val(operator);
             }
+            select_operator.val(operator);
          }
          else{
             // there is no active filter, make the input as readonly
