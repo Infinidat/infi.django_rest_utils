@@ -317,6 +317,10 @@
 
             if (operator == 'isnull' || operator == 'isnotnull') {
                 input_tag.hide();
+                //if value = 0, need to change isnull to isnotnull and vice versa
+                if (value_ == 0){
+                    operator = operator == 'isnull' ? 'isnotnull' : 'isnull';
+                }
             }
             else if (filter_.value.indexOf(':') > -1) {
                 if (operator == ''){
