@@ -51,6 +51,9 @@ class DefaultRouter(routers.DefaultRouter):
                     if '(' in prefix: # The url contains placeholders, so we can't show it
                         continue
                     func = viewset.settings.VIEW_DESCRIPTION_FUNCTION
+                    # Fixed compatibility with django rest framwork V3.9.1:
+                    # adding description to the current viewset in order to use it in the function rest_framework.views.get_view_description
+                    viewset.description = viewset.__doc__ or ''
                     desc = func(viewset, html)
                     objects_html += "<h4><a href=\"{}\">{}</a></h4>{}".format(prefix, viewset().get_view_name(), desc)
                 parts.append(objects_html)

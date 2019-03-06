@@ -34,7 +34,9 @@ class ViewDescriptionMixin(object):
     def _get_view_description_parts(self, html):
 
         func = self.settings.VIEW_DESCRIPTION_FUNCTION
-        parts = [func(self.__class__, html)]
+        # Fixed compatibility with django rest framwork V3.9.1: send the instance to rest_framework.views.get_view_description
+        # which will find its class.
+        parts = [func(self, html)]
 
         for authenticator in self.get_authenticators():
             if hasattr(authenticator, 'get_authenticator_description'):
