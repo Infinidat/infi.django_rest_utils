@@ -61,7 +61,8 @@ class LargeQuerySetPaginator(Paginator):
         "Validates the given 1-based page number."
         try:
             number = int(number)
-        except ValueError:
+        # catch any case that given number is None or a string which is not a number
+        except (ValueError, TypeError):
             raise PageNotAnInteger('That page number is not an integer')
         if number < 1:
             raise EmptyPage('That page number is less than 1')

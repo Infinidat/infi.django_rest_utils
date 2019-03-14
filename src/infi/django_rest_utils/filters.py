@@ -2,7 +2,7 @@ from builtins import str
 from past.builtins import basestring
 from builtins import object
 from django.conf import settings
-from django.core.exceptions import ValidationError as DjangoValidationError
+from django.core.exceptions import FieldError, ValidationError as DjangoValidationError
 from django.template.loader import render_to_string
 from django.db.models import Q
 
@@ -132,11 +132,12 @@ def _get_filterable_fields(view):
     if hasattr(serializer, 'get_filterable_fields'):
         return serializer.get_filterable_fields()
     # Autodetect filterable fields
-    return [
-        FilterableField(field.source or field_name, datatype=_get_field_type(field))
-        for field_name, field in serializer.fields.items()
-        if not getattr(field, 'write_only', False) and not field.source == '*'
-    ]
+    ret = []
+    for field_name, field in serializer.fields.items():
+        if not getattr(field, 'write_only', False) and not field.source == '*':
+            source = (field.source or field_name).replace('.', '__')
+            ret.append(FilterableField(field_name, source, datatype=_get_field_type(field)))
+    return ret
 
 
 def _get_field_type(serializer_field):
@@ -144,11 +145,12 @@ def _get_field_type(serializer_field):
     Determine the appropriate FilterableField type for the given serializer field.
     '''
     from rest_framework.fields import BooleanField, IntegerField, FloatField, DecimalField, DateTimeField
+    from rest_framework.relations import PrimaryKeyRelatedField
     if isinstance(serializer_field, BooleanField):
         return FilterableField.BOOLEAN
-    if isinstance(serializer_field, IntegerField):
+    if isinstance(serializer_field, (IntegerField, PrimaryKeyRelatedField)):
         return FilterableField.INTEGER
-    if isinstance(serializer_field, FloatField) or isinstance(serializer_field, DecimalField):
+    if isinstance(serializer_field, (FloatField, DecimalField)):
         return FilterableField.FLOAT
     if isinstance(serializer_field, DateTimeField):
         return FilterableField.DATETIME
@@ -245,7 +247,7 @@ class InfinidatFilter(filters.BaseFilterBackend):
         q, negate = self._build_q(field, expr)
         try:
             return queryset.exclude(q).distinct() if negate else queryset.filter(q).distinct()
-        except (ValueError, DjangoValidationError):
+        except (ValueError, DjangoValidationError, FieldError):
             raise ValidationError(field.name + ': the given operator or value are inappropriate for this field')
 
     def _build_q(self, field, expr):
@@ -400,11 +402,11 @@ class OrderingFilter(filters.OrderingFilter):
             sortable_fields = getattr(serializer, 'get_ordering_fields', lambda: None)()
             if sortable_fields is None:
                 # Autodetect fields
-                sortable_fields = [
-                    OrderingField(field.source or field_name)
-                    for field_name, field in serializer.fields.items()
-                    if not getattr(field, 'write_only', False) and not field.source == '*'
-                ]
+                sortable_fields = []
+                for field_name, field in serializer.fields.items():
+                    if not getattr(field, 'write_only', False) and not field.source == '*':
+                        source = (field.source or field_name).replace('.', '__')
+                        sortable_fields.append(OrderingField(field_name, source))
         else:
             sortable_fields = [OrderingField(name) for name in sortable_fields]
         return sortable_fields
