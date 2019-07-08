@@ -39,8 +39,13 @@ class FilterableField(object):
     FLOAT    = 'float'
     BOOLEAN  = 'boolean'
     DATETIME = 'datetime'
+    CAPACITY = 'capacity'
+
+    _datatypes = (STRING, INTEGER, FLOAT, BOOLEAN, DATETIME, CAPACITY)
 
     def __init__(self, name, source=None, converter=None, datatype=STRING, advanced=False):
+        assert datatype in FilterableField._datatypes, 'Invalid datatype "%s"' % datatype
+        assert not (datatype == FilterableField.CAPACITY and converter), 'Converter is not supported for capacity fields'
         self.name = name
         self.source = source or name
         self.converter = converter or (lambda value: value)
@@ -57,6 +62,8 @@ class FilterableField(object):
         return '<FilterableField name=%s source=%s datatype=%s>' % (self.name, self.source, self.datatype)
 
     def convert(self, value):
+        if self.datatype == FilterableField.CAPACITY:
+            return _convert_capacity(value)
         if isinstance(value, list):
             return [self.converter(v) for v in value]
         else:
@@ -93,6 +100,45 @@ class FilterableField(object):
             if datatype:
                 filterable_fields.append(cls(field.name, datatype=datatype))
         return filterable_fields
+
+
+def _convert_capacity(values):
+    '''
+    Converts values such as "100 GB" or "1TiB" to bytes. Unitless values are
+    interpreted as bytes. If there's a list of values and the last one has units,
+    the units are applied to any unitless values. For example "1GB,2,3,4TB" is
+    interpreted as "1GB,2TB,3TB,4TB". Units are case-sensitive.
+    '''
+    from capacity import capacity
+    # Check if we got a single value or multiple values
+    single_value = (not isinstance(values, list))
+    if single_value:
+        values = [values]
+    # If the last value has a unit, use it as the default for values that don't
+    default_units = 'byte'
+    for units in capacity._KNOWN_CAPACITIES:
+        if values[-1].endswith(units):
+            default_units = units
+            break
+    # Parse each value to a Capacity instance
+    capacities = []
+    for v in values:
+        v = v.strip()
+        # If v is a plain number without units, use the default units
+        try:
+            float(v)
+            v += default_units
+        except ValueError:
+            pass
+        # Parse the capacity
+        try:
+            capacities.append(capacity.from_string(v))
+        except:
+            expected = ', '.join(capacity._KNOWN_CAPACITIES.keys())
+            raise ValidationError('Invalid capacity value "%s", supported units are: %s' % (v, expected))
+    # Convert to bytes
+    byte_values = [int(c / capacity.byte) for c in capacities]
+    return byte_values[0] if single_value else byte_values
 
 
 class Operator(object):
