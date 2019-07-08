@@ -75,31 +75,38 @@
 
     {% include "django_rest_utils/functions.js" %}
 
-    function advanced_search(){
+    function advanced_search() {
         var uri = window.location.toString();
-        // remove all current filters in the uri
-        fields_info.forEach(function(field){
+        // Remove all current filters in the uri
+        fields_info.forEach(function(field) {
             uri = removeQueryStringParameter(field.name, uri);
         });
-        // remove the page param from the url
+        // Remove the page param from the url
         uri = removeQueryStringParameter('page', uri);
-        // add to the uri any filters that exists in the rows of the table advanced_filters
+        // Add to the uri any filters that exists in the rows of the table advanced_filters
         $('#advanced_filters tr').each(function() {
-            var selected_field = $(this).find('.select-field');
-            var selected_operator =  $(this).find('.select-operator');
-            var input_ = $(this).find(".input-value");
-            if (selected_field.val() && input_.val()){
-                var value = selected_operator.val() + ':' + encodeURIComponent(input_.val());
-                uri = updateQueryStringParameter(selected_field.val(), value, uri);
+            // Get the field name and operator
+            var field = $(this).find('.select-field').val();
+            var operator =  $(this).find('.select-operator').val();
+            // Get the field value (concatenate all input fields to support capacity datatype)
+            var value = '';
+            $(this).find(".td-input :input").each(function(index, input) {
+                value += $(input).val();
+            });
+            // Update the query string
+            if (field && value) {
+                var value = operator + ':' + encodeURIComponent(value);
+                uri = updateQueryStringParameter(field, value, uri);
             }
-            else if (selected_field.val() && (selected_operator.val() === 'isnull' || selected_operator.val() === 'isnotnull' )){
-                var value = selected_operator.val() + ':' + '1';
-                uri = updateQueryStringParameter(selected_field.val(), value, uri);
+            else if (field && (operator === 'isnull' || operator === 'isnotnull')) {
+                var value = operator + ':' + '1';
+                uri = updateQueryStringParameter(field, value, uri);
             }
             else {
-                uri = removeQueryStringParameter(selected_field.val(), uri);
+                uri = removeQueryStringParameter(field, uri);
             }
         });
+        // Navigate
         window.location = uri;
     }
 
@@ -118,65 +125,60 @@
         {% endfor %}
     ];
 
-
     var active_filters = [
         {% for filter in active_filters %}
             {name: "{{filter.0}}", value: "{{filter.1}}"},
         {% endfor %}
     ];
 
-
     var operator_allow_multiple = ['in','out'];
 
     window.addEventListener("load", function(event) {
         // if there is active filter, create filter from each active filter
-        if (active_filters && active_filters.length){
-            active_filters.forEach( function (item)
-                {
+        if (active_filters && active_filters.length) {
+            active_filters.forEach(function(item) {
                 create_filter(item);
-                }
-            );
+            });
         }
         // if there is no active filter, create 3 new empty filters
         else {
              create_filter();
              create_filter();
              create_filter();
-             }
+        }
 
         // ADD LISTENER TO ANY CHANGE IN THE TABLE IN SELECTOR OF FIELD
         // BUILDING A NEW INPUT TAG ACCORDING TO THE CURRENT FIELD AND SELECTED OPERATOR
-        $('#fields_table').on('change', '.select-field', function(e){
-           var target_ = $(e.target);
-           var data_type = target_.find(':selected').attr('data-type');
-           if (!data_type){
+        $('#fields_table').on('change', '.select-field', function(e) {
+            var target_ = $(e.target);
+            var data_type = target_.find(':selected').attr('data-type');
+            if (!data_type) {
                 data_type = 'unknown';
-           }
-           var parent_tr = $(e.target).closest('tr');
-           parent_tr.find('.td-type').text('(' + data_type + ')');
-           var input_tag = parent_tr.find('.input-value');
-           operator_tag = parent_tr.find('.select-operator');
-           if (target_.val()){
-               selected_operator = operator_tag.find(':selected').attr('value');
+            }
+            var parent_tr = $(e.target).closest('tr');
+            parent_tr.find('.td-type').text('(' + data_type + ')');
+            operator_tag = parent_tr.find('.select-operator');
+            if (target_.val()) {
+                selected_operator = operator_tag.find(':selected').attr('value');
 
-               var new_input_tag = build_input_field(data_type, selected_operator);
+                var new_input_tag = build_input_field(data_type, selected_operator);
 
-               if (selected_operator === 'isnull' || selected_operator === 'isnotnull'){
+                if (selected_operator === 'isnull' || selected_operator === 'isnotnull') {
                     new_input_tag.hide();
-               }
-           }
-           else{
-                var new_input_tag = $('<input/>').attr('class', 'form-control input-value test').attr('type', 'text');
+                }
+            }
+            else {
+                var new_input_tag = $('<input class="form-control input-value" type="text">');
                 new_input_tag.attr('readonly', true);
                 operator_tag.val('eq');
-           }
+            }
 
-            input_tag.replaceWith(new_input_tag);
+            parent_tr.find('.td-input').html(new_input_tag);
         });
 
         // ADD LISTENER TO ANY CHANGE IN OPERATOR
         // CHANGE THE INPUT PATTERN ACCORDING TO THE CURRENT OPERATOR AND SELECTED FIELD
-        $('#fields_table').on('change', '.select-operator', function(e){
+        $('#fields_table').on('change', '.select-operator', function(e) {
             var target_ = $(e.target);
             var selected_operator = target_.find(':selected').attr('value');
             var parent_tr = $(e.target).closest('tr');
@@ -185,89 +187,99 @@
 
             var input_tag = parent_tr.find('input');
 
-            if (selected_operator === 'isnull' || selected_operator === 'isnotnull'){
+            if (selected_operator === 'isnull' || selected_operator === 'isnotnull') {
                 input_tag.hide();
             } else {
                 input_tag.show();
                 input_pattern = build_input_pattern(data_type, selected_operator);
-                pattern= input_pattern[0];
+                pattern = input_pattern[0];
                 title = input_pattern[1];
-                if (pattern != ''){
+                if (pattern != '') {
                     input_tag.attr('pattern', pattern).attr('title', title);
                 }
             }
         });
 
-        $('#fields_table').on('click', '.remove-button', function(e){
+        $('#fields_table').on('click', '.remove-button', function(e) {
             $(e.target).closest('tr').remove();
-
         });
     });
 
 
-   function build_input_pattern(input_type, operator){
-   //helper function to build the pattern attribute of the input field
+    function build_input_pattern(input_type, operator) {
+        //helper function to build the pattern attribute of the input field
         var pattern = ''
         var title = ''
-        if (input_type == 'integer'){
+        if (input_type == 'integer') {
             // if its integer and multiple values is allowed-> add a pattern to allow a list of integers
-            if (operator_allow_multiple.includes(operator)){
+            if (operator_allow_multiple.includes(operator)) {
                 pattern =  '^\\[\\d+(,\\d+)*\\]|\\d+(,\\d+)*|\\(\\d+(,\\d+)*\\)$' //list: [0-9]+(,[0-9]+)*, between: '([0-9]+)*(,[0-9]+)'
                 title = 'Integer list can contain only numbers seperated by a comma. It can be enclosed by () or []'
             }
-            else if(operator == 'between'){
+            else if (operator == 'between') {
             // if is integer and operator between-> add a pattern to allow a comma separated pair of integers
                 pattern = '(\\d+)*(,\\d+)'
                 title = 'Operator Between can contain only two values separated by a comma'
             }
             // multiple values is not allowed-> add pattern to allow a single integer only
-            else{
+            else {
                 pattern = '^\\d+$';
                 title = 'Integer field can contain only numbers'
             }
         }
-        else if (['double', 'float'].includes(input_type)){
-           // if its double/float and multiple values is allowed-> add a pattern to allow a list of decimals
-            if (operator_allow_multiple.includes(operator)){
-                pattern = '^\\d+([.]\\d+)(,\\d+([.]\\d+))*|\\[\\d+([.]\\d+)(,\\d+([.]\\d+))*\\]|\\(\\d+([.]\\d+)(,\\d+([.]\\d+))*\\)$';
-                title = 'A list of Decimal numbers can contain only decimal numbers seperated by a comma. It can be enclosed by () or []'
+        else if (['double', 'float', 'capacity'].includes(input_type)) {
+            // if its double/float and multiple values is allowed-> add a pattern to allow a list of decimals
+            if (operator_allow_multiple.includes(operator)) {
+                pattern = '^\\d+([.]\\d+)?(,\\d+([.]\\d+)?)*|\\[\\d+([.]\\d+)?(,\\d+([.]\\d+)?)*\\]|\\(\\d+([.]\\d+)?(,\\d+([.]\\d+)?)*\\)$';
+                title = 'A list of decimal numbers seperated by a comma is expected. It can be enclosed by () or []'
             }
-            else if(operator == 'between') {
+            else if (operator == 'between') {
             // if is double/float and operator between-> add a pattern to allow a comma separated pair of decimals
-                pattern = '^(\\d+([.]\\d+))*(,\\d+([.]\\d+))$'
+                pattern = '^(\\d+([.]\\d+)?)*(,\\d+([.]\\d+)?)$'
                 title = 'Operator Between can contain only two decimal values seperated by a comma'
             }
-           // multiple values is not allowed-> add a pattern to allow a single float only
-            else{
-               pattern = '^\\d+([.]\\d+)$';
-               title = 'A decimal number must contain a decimal point and number. i.e 1.0, 1.5'
+            // multiple values is not allowed-> add a pattern to allow a single float only
+            else {
+               pattern = '^\\d+([.]\\d+)?$';
+               title = 'A decimal number is expected'
             }
         }
         return [pattern, title];
-   };
+    };
 
 
-   function build_input_field(input_type, operator){
-       if (input_type == 'boolean') {
+    function build_input_field(input_type, operator) {
+        if (input_type == 'boolean') {
             var input_field  = $("<select class='form-control input-value'><option value='1'>true</option><option value='0'>false</option</select>");
-       }
-       else {
+        }
+        else {
             // if the input_type is not boolean, its type will be text and the content will be validated according to the
             // calculated pattern
            var input_field  = $("<input type='text' class='form-control input-value'></input>");
            // find out what should be the pattern and the title of the input field
            input_pattern = build_input_pattern(input_type, operator);
-           pattern= input_pattern[0];
+           pattern = input_pattern[0];
            title = input_pattern[1];
-           if (pattern != ''){
+           if (pattern != '') {
                 input_field.attr('pattern', pattern).attr('title', title);
            }
         };
-       return input_field;
-   };
+        // For capacity fields, add a dropdown of units
+        if (input_type == 'capacity') {
+            var options = [];
+            $.each(['bytes', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB'], function(i, unit) {
+                var value = (i ? unit : '');
+                options.push('<option value="' + value + '">' + unit + '</option>');
+            });
+            var select = '<select class="form-control" style="display: inline; width: 35%; margin-left: 5%;">' + options.join('') + '</select>';
+            input_field.attr('style', 'display: inline; width: 60%;');
+            input_field = $('<div/>').append(input_field).append(select);
+        }
+        return input_field;
+    };
 
 
-    function create_filter(filter_){
+    function create_filter(filter_) {
         var tr_ = $('<tr/>');
         var td_field = $('<td/>');
         // create the select input of field
@@ -290,7 +302,7 @@
             select_operator.append($('<option>').attr('value',this.name).text(this.title));
         });
 
-        var td_input = $('<td/>');
+        var td_input = $('<td class="td-input"/>');
 
         div2.appendTo(div1);
         div1.appendTo(td_operator);
@@ -301,36 +313,42 @@
         td_type.appendTo(tr_);
 
         // if there is a given filter, assign its details in the filter inputs
-        if (filter_ != undefined){
+        if (filter_ != undefined) {
             $(select_field).val(filter_.name);
             // find the data type of the filter_ and insert it to the type column
-            data_type = $(select_field).find(':selected').attr('data-type');
-            td_type.text(data_type);
+            var data_type = $(select_field).find(':selected').attr('data-type');
+            td_type.text('(' + data_type + ')');
 
-            var operator = filter_.value.substr(0,filter_.value.indexOf(':'));
-            var value_ = filter_.value.substr(filter_.value.indexOf(':') + 1, filter_.value.length);
+            // Get operator and value
+            var operator = filter_.value.substr(0,filter_.value.indexOf(':')) || 'eq';
+            var value = filter_.value.substr(filter_.value.indexOf(':') + 1, filter_.value.length);
 
             // create input tag according to the data type and the operator
             input_tag = build_input_field(data_type, operator)
             input_tag.appendTo(td_input);
 
             if (operator == 'isnull' || operator == 'isnotnull') {
-                input_tag.hide();
+                td_input.hide();
                 //if value = 0, need to change isnull to isnotnull and vice versa
-                if (value_ == 0){
+                if (value == 0) {
                     operator = operator == 'isnull' ? 'isnotnull' : 'isnull';
                 }
             }
-            else if (operator === ''){
-                operator = 'eq';
-                input_tag.val(value_);
+            else if (data_type == 'capacity') {
+                // Split capacity units from the value
+                var re = /^(.*[^a-zA-Z ])\s*([a-zA-Z]*)$/
+                var matches = re.exec(value);
+                if (matches) {
+                    td_input.find('input').val(matches[1]);
+                    td_input.find('select').val(matches[2]);
+                }
             }
-            else if (filter_.value.indexOf(':') > -1) {
-                input_tag.val(value_);
+            else {
+                input_tag.val(value);
             }
             select_operator.val(operator);
          }
-         else{
+         else {
             // there is no active filter, make the input as readonly
             var input_tag = $('<input/>').attr('class', 'form-control input-value').attr('type', 'text');
             input_tag.attr('readonly', true).appendTo(td_input);
@@ -343,6 +361,5 @@
         $(tr_).appendTo('#fields_table');
 
     }
-
 
 </script>
