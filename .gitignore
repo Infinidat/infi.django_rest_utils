@@ -58,3 +58,5 @@ buildout.in
 src/infi/django_rest_utils/__version__.py
 bootstrap.py
 .idea/
+.vscode/
+.mypy_cache/
