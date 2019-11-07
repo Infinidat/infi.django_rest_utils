@@ -79,7 +79,8 @@ class QueryTimeLimitMixin(object):
                 cursor.execute('SET statement_timeout = %s', [self.time_limit])
                 return super(QueryTimeLimitMixin, self).list(request, *args, **kwargs)
             except OperationalError as e:
-                if 'statement timeout' in e.message:
+                message = e.message if hasattr(e, 'message') else str(e)
+                if 'statement timeout' in message:
                     raise ValidationError(self.timeout_message)
                 raise
             finally:
@@ -158,7 +159,7 @@ class StreamingMixin(object):
             dict_renderering_function # dict => str
         )
         safe_rendering_function = wrap_with_try_except(renderering_function,
-                                                       on_except= lambda e: json.dumps({'error': e.message}),
+                                                       on_except= lambda e: json.dumps({'error': e.message if hasattr(e, 'message') else str(e)}),
                                                        logger=logger)
         # map every model object to its string representation
         rendered_queryset_iterator = map(safe_rendering_function, queryset.iterator())
