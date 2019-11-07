@@ -24,7 +24,8 @@ def _pluck_response(response, renderer_context):
                                result=pluck_result(response['result'], request.query_params.getlist('fields')))
     except Exception as e:
         renderer_context['response'].status_code = 400
-        return _build_response(metadata=dict(ready=True), error=dict(message=e.message))
+        message = e.message if hasattr(e, 'message') else str(e)
+        return _build_response(metadata=dict(ready=True), error=dict(message=message))
 
 
 def _replace_nested_with_ids(data):
@@ -95,4 +96,3 @@ class DummyCSVRenderer(BaseRenderer):
             return ''.join(data)
         else:
             raise ValueError('Setting format to csv is not supported on views that do not inherit StreamMixin')
-
