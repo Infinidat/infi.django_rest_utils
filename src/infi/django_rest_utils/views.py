@@ -3,18 +3,25 @@ from builtins import map
 from builtins import str
 from builtins import zip
 from builtins import object
-from django.utils.safestring import mark_safe
-from django.template.loader import render_to_string
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
+from django.core import exceptions
 from django.http import HttpResponse, StreamingHttpResponse, HttpResponseBadRequest
+from django.template.loader import render_to_string
+from django.utils import timezone
+from django.utils.safestring import mark_safe
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.exceptions import APIException
+from rest_framework.permissions import AllowAny
 from rest_framework.relations import ManyRelatedField, RelatedField
 from rest_framework.serializers import BaseSerializer
-from rest_framework.exceptions import APIException
 import json
 from functools import partial
 from itertools import repeat, chain, islice
 from infi.django_rest_utils.pluck import pluck_result, collect_items_from_string_lists
-from .utils import to_csv_row, composition, wrap_with_try_except
+from .models import APIToken, UserActivity
+from .utils import to_csv_row, composition, wrap_with_try_except, send_email
 from django.utils.encoding import escape_uri_path
 import logging
 
@@ -190,3 +197,42 @@ def user_token_view(request):
     from .models import APIToken
     token = APIToken.objects.for_user(request.user)
     return HttpResponse(str(token), content_type='text/plain')
+
+
+@api_view(['POST',])
+@authentication_classes([])  # An unauthenticated REST API.
+@permission_classes([AllowAny])  # A permissionless REST API.
+def get_rest_api_token_for_user(request, *args, **kwargs):
+    # Argument "user_name": The name of the user to whom his/her REST-API-code shall be sent by email.
+    # Sample request using curl: curl -X POST http://localhost:8003/api/rest/get_rest_api_token_for_user/ -d "user_name=abcd"
+    print("request.POST = ", request.POST.__dict__)
+    data = request.POST
+    user_name = data.get("user_name")
+    try:
+        user = User.objects.get(username=user_name)
+    except exceptions.ObjectDoesNotExist:
+        logger.warning("REST API get_rest_api_token_for_user called for non-existing user {}".format(user_name))
+    else:
+        do_reject_email_request = True
+        was_token_email_sent = False
+        try:
+            user_activity = UserActivity.objects.get(user=user)
+        except exceptions.ObjectDoesNotExist:
+            user_activity = UserActivity.objects.create(user=user)
+        if user_activity.may_send_rest_api_token_email():
+            do_reject_email_request = False
+            user_rest_api_token = APIToken.objects.for_user(user).token
+            try:
+                plaintext_body = """Dear user,\n\nYou requested the following information:\n\n\t\t\t{}\n\nIf you did not request this information, please inform {} that you received an unsolicited email with sensitive information, but do not forward this email.\n\nThis email contains sensitive information. Do not share the contents of this email, reply to it, or forward it to anyone.\n\nThank you,\nInventory Support Team""".format(user_rest_api_token, settings.SECURITY_EMAIL)
+                send_email(settings.REST_API_TOKEN_EMAIL_SUBJECT, None, plaintext_body, settings.REST_API_TOKEN_EMAIL_SENDER, [user.email])
+            except KeyError as ke:
+                logger.warning("REST API get_rest_api_token_for_user called though required {} setting is missing".format(ke))
+            except Exception as e:
+                pass
+            else:
+                user_activity.last_rest_api_token_email_sent_at = timezone.now()
+                user_activity.save()
+                was_token_email_sent = True
+        delivery_state = 'succeeded' if was_token_email_sent else 'rejected' if do_reject_email_request else 'failed'
+        logger.info("REST API get_rest_api_token_for_user called for user {}; previous token email sent at {}; delivery of another token email {}".format(user_name, user_activity.last_rest_api_token_email_sent_at, delivery_state))
+    return HttpResponse(status=200)  # No text shall be added!

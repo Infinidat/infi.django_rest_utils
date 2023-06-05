@@ -20,6 +20,7 @@ def to_csv_row(field_list, dct):
     writer.writerow([dct[f] for f in field_list])
     return bio.getvalue()
 
+
 def composition(*args):
     def f(obj):
         output = obj
@@ -27,6 +28,7 @@ def composition(*args):
             output = g(output)
         return output
     return f
+
 
 def wrap_with_try_except(f, on_except=None, logger=None):
     def g(*args, **kwargs):
@@ -37,3 +39,14 @@ def wrap_with_try_except(f, on_except=None, logger=None):
                 logger.error(e)
             return on_except(e) if on_except else None
     return g
+
+
+def send_email(subject, html_body, plaintext_body, sender, recipient_list, bcc_list=[], do_fail_silently=False):
+    from django.core.mail import EmailMultiAlternatives
+    from django.template.loader import render_to_string
+
+    email = EmailMultiAlternatives(subject, plaintext_body, sender, recipient_list, bcc=bcc_list)
+    if html_body:
+        html_str_body = render_to_string(html_body)
+        email.attach_alternative(html_str_body, "text/html")
+    email.send(do_fail_silently)
