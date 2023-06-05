@@ -204,12 +204,53 @@ Authentication
 ### APITokenAuthentication
 
 A simple authentication scheme where each user gets a random 12-character API token, and needs to present this token in API requests via the `X-API-Token` header.
+The REST API token is openly displayed to each logged-in user whenever he/she is browsing the main page of the the api app, /api/rest/.
 
 To get the API token assigned to the logged-in user, you can expose `user_token_view` in your `urls.py` file:
 ```python
 from infi.django_rest_utils.views import user_token_view
 
 urlpatterns = [
+    url(r'^user_token/$', user_token_view, name='user_token'),
+]
+```
+
+### APITokenAuthentication_TokenSentByEmail
+
+A simple authentication scheme where each user gets a random 12-character API token, and needs to present this token in API requests via the `X-API-Token` header.
+The REST API token isn't openly displayed to each logged-in user whenever he/she is browsing the main page of the the api app, /api/rest/.
+Instead, that page offers the user an option to click a link, that will post a request to inventory, asking to send him/her is/her own REST API token by email.
+The email recorded in the users database table is used for this purpose.
+
+In order to use this authenticator class, the following changes must be made in relation with what is done when APITokenAuthentication is used:
+
+a. Run database migrations.
+
+b. In the settings dictionary: 
+
+REST_FRAMEWORK = {
+    ...
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'infi.django_rest_utils.authentication.APITokenAuthentication_TokenSentByEmail',
+        ...
+
+REST_API_TOKEN_EMAIL_SUBJECT = '...'
+REST_API_TOKEN_EMAIL_SENDER = '...'
+SECURITY_EMAIL = '...'
+
+c. In the urls module:
+
+urlpatterns = [
+    ...
+    url(r'^rest/api_token/', include('infi.django_rest_utils.urls')),
+]
+        
+To get the API token assigned to the logged-in user, you can expose `user_token_view` in your `urls.py` file:
+```python
+from infi.django_rest_utils.views import user_token_view
+
+urlpatterns = [
+    ...
     url(r'^user_token/$', user_token_view, name='user_token'),
 ]
 ```
