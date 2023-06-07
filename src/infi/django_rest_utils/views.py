@@ -228,7 +228,7 @@ def get_rest_api_token_for_user(request, *args, **kwargs):
             except KeyError as ke:
                 logger.warning("REST API get_rest_api_token_for_user called though required {} setting is missing".format(ke))
             except Exception as e:
-                pass
+                raise
             else:
                 user_activity.last_rest_api_token_email_sent_at = timezone.now()
                 user_activity.save()
