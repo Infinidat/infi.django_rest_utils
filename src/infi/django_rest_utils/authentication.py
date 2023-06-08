@@ -6,6 +6,12 @@ from django.contrib.auth.models import User
 from django.template.loader import render_to_string
 from rest_framework import authentication, exceptions
 
+try:
+    from django.urls import reverse
+except ImportError:
+    # Django < 2
+    from django.core.urlresolvers import reverse
+
 from .models import APIToken
 
 
@@ -40,7 +46,6 @@ class APITokenAuthentication_TokenSentByEmail(APITokenAuthentication):
     '''
 
     def get_authenticator_description(self, view, html):
-        from django.core.urlresolvers import reverse
         token_req_url = reverse('get_rest_api_token_for_user')  # settings.REST_API_TOKEN_EMAIL_REQUEST_URL
         user_name = view.request.user.username
         return render_to_string('django_rest_utils/api_token_authentication_sent_by_email.html', dict(token_req_url=token_req_url, user_name=str(user_name)))
