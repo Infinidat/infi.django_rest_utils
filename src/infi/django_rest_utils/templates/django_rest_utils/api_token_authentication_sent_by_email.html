@@ -1,0 +1,33 @@
+<h3>Authentication</h3>
+
+<p>
+    To access the API you need to send an <code>X-API-Token</code> HTTP header holding your API token.
+    In order to get your own token by email, click the following link:
+    <br>
+    <a href="#" onclick="sendGetMyRestApiTokenPostRequest('{{ token_req_url }}', '{{ user_name }}')">Send My REST API Token By Email</a>
+</p>
+
+<div class="warning">
+    Your API token is personal and should not be shared with anyone. In particular, it must
+    never be provided to a customer or a partner for any purpose, or included in a program that
+    is used outside of Infinidat.
+</div>
+
+<script>
+    function sendGetMyRestApiTokenPostRequest(token_req_url, user_name) {
+      var xhr = new XMLHttpRequest();
+      var params = 'user_name=' + user_name;
+  
+      xhr.open('POST', token_req_url, true);
+      xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+  
+      xhr.onreadystatechange = function() {
+        if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
+          console.log('Get-own-REST-API-token POST request sent successfully; user - ' + user_name + ', url - ' + token_req_url);
+        }
+      };
+  
+      xhr.send(params);
+    }
+  </script>
+  
