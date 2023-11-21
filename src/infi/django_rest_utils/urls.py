@@ -1,9 +1,9 @@
 try:
-    # For django < 4
-    from django.conf.urls import url
-except ImportError:
-    # For django >= 4
+    # For django >= 2
     from django.urls import re_path as url
+except ImportError:
+    # For django < 2, removed in 4
+    from django.conf.urls import url
 
 from . import views
 

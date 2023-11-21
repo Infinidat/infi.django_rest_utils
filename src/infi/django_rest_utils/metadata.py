@@ -5,11 +5,11 @@ from django.db import connections
 from django.conf import settings
 
 try:
-    # For django < 4
-    from django.utils.encoding import force_text
-except ImportError:
-    # For django >= 4
+    # For django >= 2
     from django.utils.encoding import force_str as force_text
+except ImportError:
+    # For django < 2, removed in 4
+    from django.utils.encoding import force_text
 
 
 class SimpleMetadata(metadata.SimpleMetadata):
