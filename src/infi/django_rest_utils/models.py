@@ -13,7 +13,7 @@ class APITokenManager(models.Manager):
         try:
             return self.get(user=user)
         except APIToken.DoesNotExist:
-            return self.create(user=user, token=get_random_string())
+            return self.create(user=user, token=get_random_string(12))
 
 
 class APIToken(models.Model):

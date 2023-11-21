@@ -1,10 +1,15 @@
 from rest_framework import metadata
-from django.utils.encoding import force_text
 from .utils import get_approximate_count_for_all_objects
 from rest_framework import exceptions, serializers
 from django.db import connections
 from django.conf import settings
 
+try:
+    # For django >= 2
+    from django.utils.encoding import force_str as force_text
+except ImportError:
+    # For django < 2, removed in 4
+    from django.utils.encoding import force_text
 
 
 class SimpleMetadata(metadata.SimpleMetadata):
