@@ -208,13 +208,13 @@ def get_rest_api_token_for_user(request, *args, **kwargs):
     print("request.POST = ", request.POST.__dict__)
     data = request.POST
     user_name = data.get("user_name")
+    was_token_email_sent = False
     try:
         user = User.objects.get(username=user_name)
     except exceptions.ObjectDoesNotExist:
         logger.warning("REST API get_rest_api_token_for_user called for non-existing user {}".format(user_name))
     else:
         do_reject_email_request = True
-        was_token_email_sent = False
         try:
             user_activity = UserActivity.objects.get(user=user)
         except exceptions.ObjectDoesNotExist:
@@ -235,4 +235,4 @@ def get_rest_api_token_for_user(request, *args, **kwargs):
                 was_token_email_sent = True
         delivery_state = 'succeeded' if was_token_email_sent else 'rejected' if do_reject_email_request else 'failed'
         logger.info("REST API get_rest_api_token_for_user called for user {}; previous token email sent at {}; delivery of another token email {}".format(user_name, user_activity.last_rest_api_token_email_sent_at, delivery_state))
-    return HttpResponse(status=200)  # No text shall be added!
+    return HttpResponse(status=(200 if was_token_email_sent else 500))  # No text shall be added!
