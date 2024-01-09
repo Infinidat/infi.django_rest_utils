@@ -7,6 +7,8 @@
     <a href="#" onclick="sendGetMyRestApiTokenPostRequest('{{ token_req_url }}', '{{ user_name }}')">Send My REST API Token By Email</a>
 </p>
 
+<div id="UserRestApiTxResult"></div><br>
+
 <div class="warning">
     Your API token is personal and should not be shared with anyone. In particular, it must
     never be provided to a customer or a partner for any purpose, or included in a program that
@@ -17,16 +19,33 @@
     function sendGetMyRestApiTokenPostRequest(token_req_url, user_name) {
       var xhr = new XMLHttpRequest();
       var params = 'user_name=' + user_name;
-  
+
       xhr.open('POST', token_req_url, true);
       xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
-  
+
+      doDisplayAlert = true
       xhr.onreadystatechange = function() {
         if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
+          resultMsgTxt = "The Inventory REST API Token was sent to user " + user_name + "."
+          resultMsgColor = "blue"
+          resultMsgBoldness = "normal"
+          if (doDisplayAlert) {
+            alert(resultMsgTxt)
+            doDisplayAlert = false
+          }
           console.log('Get-own-REST-API-token POST request sent successfully; user - ' + user_name + ', url - ' + token_req_url);
+        } else {
+          resultMsgTxt = "The Inventory REST API Token could not be sent to user " + user_name + "!"
+          resultMsgColor = "red"
+          resultMsgBoldness = "bold"
+          console.log('Get-own-REST-API-token POST request not sent; user - ' + user_name + ', url - ' + token_req_url);
         }
+        var userRestApiTxResultDiv = document.getElementById("UserRestApiTxResult")
+        userRestApiTxResultDiv.innerHTML = resultMsgTxt
+        userRestApiTxResultDiv.style.color = resultMsgColor
+        userRestApiTxResultDiv.style.fontWeight = resultMsgBoldness
       };
-  
+
       xhr.send(params);
     }
   </script>
