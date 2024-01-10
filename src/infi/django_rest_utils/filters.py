@@ -321,7 +321,7 @@ class InfinidatFilter(filters.BaseFilterBackend):
         else:
             if operator.boolean:
                 try:
-                    value = int(value)
+                    value = bool(int(value))
                 except ValueError:
                     raise ValidationError('{}: "{}" operator expects {}'.format(
                                           field.name, operator.name, operator.get_expected_value_description()))
