@@ -62,3 +62,4 @@ bootstrap.py
 .mypy_cache/
 
 .venv
+.projector-env
