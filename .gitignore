@@ -60,3 +60,5 @@ bootstrap.py
 .idea/
 .vscode/
 .mypy_cache/
+
+.venv
