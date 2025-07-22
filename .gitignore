@@ -60,3 +60,6 @@ bootstrap.py
 .idea/
 .vscode/
 .mypy_cache/
+
+.venv
+.projector-env
