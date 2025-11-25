@@ -169,7 +169,7 @@ class StreamingMixin(object):
                                                        on_except= lambda e: json.dumps({'error': e.message if hasattr(e, 'message') else str(e)}),
                                                        logger=logger)
         # map every model object to its string representation
-        rendered_queryset_iterator = map(safe_rendering_function, queryset.iterator())
+        rendered_queryset_iterator = map(safe_rendering_function, queryset.iterator(chunk_size=1000))
 
         # Add a delimiter -before- every "row"
         # The chain and zip pattern is common for combining two iterators in a round robin fasion
