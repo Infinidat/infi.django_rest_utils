@@ -2,6 +2,17 @@
 
 <p>
     To access the API you need to send an <code>X-API-Token</code> HTTP header holding your API token.
+    {% if token %}
+    <br>
     Your token is: <span style="font-family: monospace; margin-left: 5px">{{ token }}</span>
+    <br>
+    Copy it now. The token is stored as a hash and cannot be shown again.
+    {% else %}
+    <br>
+    Your token is stored as a hash and cannot be shown again. Use the token endpoint to rotate it and get a new one.
+    {% endif %}
+    {% if expires_at %}
+    <br>
+    Expiration date: {{ expires_at }}
+    {% endif %}
 </p>
-

@@ -11,6 +11,7 @@ from django.http import HttpResponse, StreamingHttpResponse, HttpResponseBadRequ
 from django.template.loader import render_to_string
 from django.utils import timezone
 from django.utils.safestring import mark_safe
+from django.views.decorators.http import require_POST
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.exceptions import APIException
 from rest_framework.permissions import AllowAny
@@ -169,7 +170,7 @@ class StreamingMixin(object):
                                                        on_except= lambda e: json.dumps({'error': e.message if hasattr(e, 'message') else str(e)}),
                                                        logger=logger)
         # map every model object to its string representation
-        rendered_queryset_iterator = map(safe_rendering_function, queryset.iterator())
+        rendered_queryset_iterator = map(safe_rendering_function, queryset.iterator(chunk_size=1000))
 
         # Add a delimiter -before- every "row"
         # The chain and zip pattern is common for combining two iterators in a round robin fasion
@@ -190,13 +191,18 @@ class StreamingMixin(object):
 
 
 @login_required
+@require_POST
 def user_token_view(request):
     """
-    Returns an API token for the logged-in user.
+    Create a new API token for the logged-in user and return it once.
+
+    Accept POST only. The default CSRF middleware protects the request. Each call rotates
+    the token, so a GET must not do this work. The previous token stops working.
+    The database stores only the hash, so the token cannot be shown again.
     """
     from .models import APIToken
-    token = APIToken.objects.for_user(request.user)
-    return HttpResponse(str(token), content_type='text/plain')
+    api_token = APIToken.objects.create_for_user(request.user)
+    return HttpResponse(api_token.get_plaintext(), content_type='text/plain')
 
 
 @api_view(['POST',])
@@ -205,7 +211,6 @@ def user_token_view(request):
 def get_rest_api_token_for_user(request, *args, **kwargs):
     # Argument "user_name": The name of the user to whom his/her REST-API-code shall be sent by email.
     # Sample request using curl: curl -X POST http://localhost:8003/api/rest/get_rest_api_token_for_user/ -d "user_name=abcd"
-    print("request.POST = ", request.POST.__dict__)
     data = request.POST
     user_name = data.get("user_name")
     was_token_email_sent = False
@@ -221,7 +226,8 @@ def get_rest_api_token_for_user(request, *args, **kwargs):
             user_activity = UserActivity.objects.create(user=user)
         if user_activity.may_send_rest_api_token_email():
             do_reject_email_request = False
-            user_rest_api_token = APIToken.objects.for_user(user).token
+            # Rotate the token and email the new plaintext. A stored token cannot be read back.
+            user_rest_api_token = APIToken.objects.create_for_user(user).get_plaintext()
             try:
                 plaintext_body = """Dear user,\n\nYou requested the following information:\n\n\t\t\t{}\n\nIf you did not request this information, please inform {} that you received an unsolicited email with sensitive information, but do not forward this email.\n\nThis email contains sensitive information. Do not share the contents of this email, reply to it, or forward it to anyone.\n\nThank you,\nInventory Support Team""".format(user_rest_api_token, settings.SECURITY_EMAIL)
                 send_email(settings.REST_API_TOKEN_EMAIL_SUBJECT, None, plaintext_body, settings.REST_API_TOKEN_EMAIL_SENDER, [user.email])
