@@ -203,10 +203,11 @@ Authentication
 ==============
 ### APITokenAuthentication
 
-A simple authentication scheme where each user gets a random 12-character API token, and needs to present this token in API requests via the `X-API-Token` header.
-The REST API token is openly displayed to each logged-in user whenever he/she is browsing the main page of the the api app, /api/rest/.
+A simple authentication scheme where each user gets a random API token. The user must present this token in API requests via the `X-API-Token` header.
+The database stores only a SHA-256 hash of the token. The token is shown once, right after it is created. The token cannot be read back later.
+The api app page, /api/rest/, shows the token only right after it is created. On later visits the page states that the token is stored as a hash.
 
-To get the API token assigned to the logged-in user, you can expose `user_token_view` in your `urls.py` file:
+To create a new token for the logged-in user and show it once, expose `user_token_view` in your `urls.py` file. Each call to this view rotates the token. The previous token stops working.
 ```python
 from infi.django_rest_utils.views import user_token_view
 
@@ -217,9 +218,9 @@ urlpatterns = [
 
 ### APITokenAuthentication_TokenSentByEmail
 
-A simple authentication scheme where each user gets a random 12-character API token, and needs to present this token in API requests via the `X-API-Token` header.
-The REST API token isn't openly displayed to each logged-in user whenever he/she is browsing the main page of the the api app, /api/rest/.
-Instead, that page offers the user an option to click a link, that will post a request to inventory, asking to send him/her is/her own REST API token by email.
+A simple authentication scheme where each user gets a random API token. The user must present this token in API requests via the `X-API-Token` header.
+The api app page, /api/rest/, does not show the token. Instead, that page offers the user a link. The link posts a request that emails the token to the user.
+Each email request rotates the token and emails the new value. A stored token cannot be read back, because the database stores only its hash.
 The email recorded in the users database table is used for this purpose.
 
 In order to use this authenticator class, the following changes must be made in relation with what is done when APITokenAuthentication is used:
@@ -259,6 +260,39 @@ urlpatterns = [
     url(r'^rest/api_token/', include('infi.django_rest_utils.urls')),
 ]
 ```
+
+### Token storage and lifecycle
+
+The database stores only a SHA-256 hash of the token. A reader of the database cannot use the stored value.
+Each token has a creation time and an optional expiry time. Authentication rejects a token after its expiry time.
+By default a new token never expires. To set an expiry on new tokens, set `REST_API_TOKEN_TTL_DAYS`.
+
+### Audit log
+
+Each request that authenticates with a token creates one `APITokenAuditLog` row. The row records the endpoint, the method, the source IP, the user, the token hash, and the time.
+The audit log is viewable in the Django admin.
+The source IP is `REMOTE_ADDR` by default. To read the client IP from the first `X-Forwarded-For` hop, set `REST_API_TOKEN_TRUST_X_FORWARDED_FOR = True`. Trust `X-Forwarded-For` only behind a trusted proxy.
+To delete old audit rows, run the management command:
+```
+django-admin prune_api_token_audit_log --days 90
+```
+Set `REST_API_TOKEN_AUDIT_RETENTION_DAYS` to provide a default for `--days`.
+
+### Settings
+
+| Setting | Default | Purpose |
+| --- | --- | --- |
+| `REST_API_TOKEN_TTL_DAYS` | `None` | Days until a new token expires. `None` means no expiry. |
+| `REST_API_TOKEN_AUDIT_ENABLED` | `True` | Write an audit row for each token-authenticated request. |
+| `REST_API_TOKEN_AUDIT_RETENTION_DAYS` | `None` | Default age for the prune command. |
+| `REST_API_TOKEN_LAST_USED_THROTTLE_SECONDS` | `0` | Minimum seconds between last-used writes. `0` writes on every request. |
+| `REST_API_TOKEN_TRUST_X_FORWARDED_FOR` | `False` | Read the client IP from `X-Forwarded-For`. |
+
+### Upgrade note
+
+Run database migrations after you upgrade. Migration `0003` hashes each token in place, so existing tokens keep working.
+Existing tokens are short and weak. The migration sets an expiry 180 days ahead on each existing token. Users must rotate to a new token before that date.
+After the upgrade, the token is shown only right after it is created or rotated.
 
 **Note**: if you are using CORS headers to allow cross-domain access to your API, be sure to include `X-API-Token` in
 the `Access-Control-Allow-Headers` header, otherwise it will not be passed to your server. For example for
