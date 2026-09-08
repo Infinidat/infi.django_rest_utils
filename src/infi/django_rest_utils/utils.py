@@ -1,5 +1,27 @@
 import unicodecsv
 
+from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_ipv46_address
+
+
+def get_client_ip(request):
+    '''Return the client IP for the request.
+
+    Return REMOTE_ADDR by default. Read the first X-Forwarded-For hop only when the setting
+    REST_API_TOKEN_TRUST_X_FORWARDED_FOR is true. Trust X-Forwarded-For only behind a trusted proxy.
+    '''
+    if getattr(settings, 'REST_API_TOKEN_TRUST_X_FORWARDED_FOR', False):
+        forwarded = request.META.get('HTTP_X_FORWARDED_FOR', '')
+        if forwarded:
+            candidate = forwarded.split(',')[0].strip()
+            try:
+                # The header comes from the client. Use it only if it is a valid IP address.
+                validate_ipv46_address(candidate)
+                return candidate
+            except ValidationError:
+                pass
+    return request.META.get('REMOTE_ADDR')
 
 
 def get_approximate_count_for_all_objects(cursor, table):
