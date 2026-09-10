@@ -1,0 +1,10 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+<p>Copy the token now. The database stores only a hash. The token cannot be shown again.</p>
+<p>Token: <span style="font-family: monospace">{{ token }}</span></p>
+{% if expires_at %}
+<p>Expiration date: {{ expires_at }}</p>
+{% endif %}
+<p><a href="{{ changelist_url }}">Return to the API token list.</a></p>
+{% endblock %}
