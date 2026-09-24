@@ -16,12 +16,30 @@
 </div>
 
 <script>
+    function getCookie(name) {
+      // Read a cookie value. The CSRF token is needed because the endpoint now requires a
+      // logged-in session, and the session authentication enforces CSRF.
+      var cookieValue = null;
+      if (document.cookie && document.cookie !== '') {
+        var cookies = document.cookie.split(';');
+        for (var i = 0; i < cookies.length; i++) {
+          var cookie = cookies[i].trim();
+          if (cookie.substring(0, name.length + 1) === (name + '=')) {
+            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+            break;
+          }
+        }
+      }
+      return cookieValue;
+    }
+
     function sendGetMyRestApiTokenPostRequest(token_req_url, user_name) {
       var xhr = new XMLHttpRequest();
       var params = 'user_name=' + user_name;
 
       xhr.open('POST', token_req_url, true);
       xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+      xhr.setRequestHeader('X-CSRFToken', getCookie('csrftoken'));
 
       doDisplayAlert = true
       xhr.onreadystatechange = function() {

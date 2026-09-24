@@ -10,9 +10,12 @@ try:
 except ImportError:
     import mock
 
+from rest_framework.test import APIRequestFactory, force_authenticate
+
 from infi.django_rest_utils.authentication import APITokenAuthentication
 from infi.django_rest_utils.models import (APIToken, APITokenAuditLog, generate_token_secret, hash_token)
-from infi.django_rest_utils.views import user_token_view
+from infi.django_rest_utils import views
+from infi.django_rest_utils.views import user_token_view, get_rest_api_token_for_user
 
 User = get_user_model()
 
@@ -180,6 +183,58 @@ class UserTokenViewTest(TestCase):
         self.assertTrue(secret)
         token = APIToken.objects.get(user=self.user)
         self.assertEqual(token.token_hash, hash_token(secret))
+
+
+class GetRestApiTokenForUserAuthTest(TestCase):
+    '''The email token endpoint must reject anonymous callers and must not let a non-staff
+    caller request a token for another user.'''
+
+    def setUp(self):
+        self.factory = APIRequestFactory()
+        self.owner = User.objects.create(username='owner', email='owner@x.com', is_active=True)
+        self.other = User.objects.create(username='other', email='other@x.com', is_active=True)
+        self.staff = User.objects.create(username='staff', email='staff@x.com', is_active=True, is_staff=True)
+
+    def _post(self, user, user_name=None):
+        data = {'user_name': user_name} if user_name is not None else {}
+        request = self.factory.post('/get_token/', data)
+        if user is not None:
+            force_authenticate(request, user=user)
+        with self.settings(REST_API_TOKEN_EMAIL_SUBJECT='s', REST_API_TOKEN_EMAIL_SENDER='a@b.c',
+                           SECURITY_EMAIL='sec@b.c'):
+            with mock.patch.object(views, 'send_email') as send_email:
+                response = get_rest_api_token_for_user(request)
+        return response, send_email
+
+    def test_anonymous_is_rejected(self):
+        response, send_email = self._post(user=None, user_name='owner')
+        self.assertIn(response.status_code, (401, 403))
+        self.assertEqual(APIToken.objects.count(), 0)
+        send_email.assert_not_called()
+
+    def test_user_can_request_own_token(self):
+        response, send_email = self._post(user=self.owner, user_name='owner')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(APIToken.objects.filter(user=self.owner).count(), 1)
+        send_email.assert_called_once()
+
+    def test_user_without_user_name_gets_own_token(self):
+        response, send_email = self._post(user=self.owner)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(APIToken.objects.filter(user=self.owner).count(), 1)
+
+    def test_non_staff_cannot_request_other_users_token(self):
+        response, send_email = self._post(user=self.owner, user_name='other')
+        self.assertEqual(response.status_code, 403)
+        # No token is rotated for the other user.
+        self.assertEqual(APIToken.objects.filter(user=self.other).count(), 0)
+        send_email.assert_not_called()
+
+    def test_staff_can_request_other_users_token(self):
+        response, send_email = self._post(user=self.staff, user_name='other')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(APIToken.objects.filter(user=self.other).count(), 1)
+        send_email.assert_called_once()
 
 
 class MigrationBackfillLogicTest(TestCase):

@@ -12,9 +12,10 @@ from django.template.loader import render_to_string
 from django.utils import timezone
 from django.utils.safestring import mark_safe
 from django.views.decorators.http import require_POST
+from rest_framework.authentication import SessionAuthentication
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.exceptions import APIException
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.relations import ManyRelatedField, RelatedField
 from rest_framework.serializers import BaseSerializer
 import json
@@ -205,19 +206,29 @@ def user_token_view(request):
     return HttpResponse(api_token.get_plaintext(), content_type='text/plain')
 
 
-@api_view(['POST',])
-@authentication_classes([])  # An unauthenticated REST API.
-@permission_classes([AllowAny])  # A permissionless REST API.
+@api_view(['POST'])
+@authentication_classes([SessionAuthentication])  # The caller must be a logged-in session user.
+@permission_classes([IsAuthenticated])  # An anonymous caller is rejected.
 def get_rest_api_token_for_user(request, *args, **kwargs):
     # Argument "user_name": The name of the user to whom his/her REST-API-code shall be sent by email.
-    # Sample request using curl: curl -X POST http://localhost:8003/api/rest/get_rest_api_token_for_user/ -d "user_name=abcd"
-    data = request.POST
-    user_name = data.get("user_name")
+    # The caller must be logged in. A non-staff caller may name only himself. A staff caller may
+    # name any user. Without the argument the caller acts on his own account.
+    # Sample request using curl (send the session cookie and CSRF token of a logged-in user):
+    #   curl -X POST http://localhost:8003/api/rest/get_rest_api_token_for_user/ -d "user_name=abcd"
+    requested_user_name = request.POST.get("user_name")
     was_token_email_sent = False
+    if requested_user_name and requested_user_name != request.user.username and not request.user.is_staff:
+        # A non-staff caller must not request a token for another user.
+        logger.warning("REST API get_rest_api_token_for_user: user {} may not request a token for {}".format(
+            request.user.username, requested_user_name))
+        return HttpResponse(status=403)
     try:
-        user = User.objects.get(username=user_name)
+        if requested_user_name and request.user.is_staff:
+            user = User.objects.get(username=requested_user_name)
+        else:
+            user = request.user
     except exceptions.ObjectDoesNotExist:
-        logger.warning("REST API get_rest_api_token_for_user called for non-existing user {}".format(user_name))
+        logger.warning("REST API get_rest_api_token_for_user called for non-existing user {}".format(requested_user_name))
     else:
         do_reject_email_request = True
         try:
@@ -240,5 +251,5 @@ def get_rest_api_token_for_user(request, *args, **kwargs):
                 user_activity.save()
                 was_token_email_sent = True
         delivery_state = 'succeeded' if was_token_email_sent else 'rejected' if do_reject_email_request else 'failed'
-        logger.info("REST API get_rest_api_token_for_user called for user {}; previous token email sent at {}; delivery of another token email {}".format(user_name, user_activity.last_rest_api_token_email_sent_at, delivery_state))
+        logger.info("REST API get_rest_api_token_for_user called for user {}; previous token email sent at {}; delivery of another token email {}".format(user.username, user_activity.last_rest_api_token_email_sent_at, delivery_state))
     return HttpResponse(status=(200 if was_token_email_sent else 500))  # No text shall be added!
