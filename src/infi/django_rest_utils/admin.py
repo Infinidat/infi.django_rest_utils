@@ -9,7 +9,7 @@ except ImportError:
     # Django < 2
     from django.core.urlresolvers import reverse
 
-from .models import APIToken, APITokenAuditLog, generate_token_secret, hash_token
+from .models import APIToken, APITokenAuditLog, UserActivity, generate_token_secret, hash_token
 
 
 class APITokenAdmin(admin.ModelAdmin):
@@ -66,5 +66,22 @@ class APITokenAuditLogAdmin(admin.ModelAdmin):
         return [field.name for field in self.model._meta.fields]
 
 
+class UserActivityAdmin(admin.ModelAdmin):
+
+    list_display = ('user', 'last_rest_api_token_email_sent_at', 'may_send_token_email')
+    list_select_related = ('user',)
+    search_fields = ('user__username',)
+    # raw_id_fields avoids a dependency on the User admin, as APITokenAdmin does.
+    raw_id_fields = ('user',)
+
+    def may_send_token_email(self, obj):
+        # Show the condition used to throttle the token email, so it is visible in the list.
+        return obj.may_send_rest_api_token_email()
+    # Set as attributes for compatibility with old Django (no admin.display decorator).
+    may_send_token_email.boolean = True
+    may_send_token_email.short_description = 'May send token email'
+
+
 admin.site.register(APIToken, APITokenAdmin)
 admin.site.register(APITokenAuditLog, APITokenAuditLogAdmin)
+admin.site.register(UserActivity, UserActivityAdmin)
